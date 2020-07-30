@@ -1,0 +1,31 @@
+{
+  "name": "lox-ts",
+  "version": "1.0.0",
+  "description": "A dummy interpreter",
+  "main": "index.js",
+  "repository": "git@github.com:nmaswood/lox-ts.git",
+  "author": "Nasr.Maswood <nasrmaswood@gmail.com>",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "tsc": "tsc",
+    "tscw": "tsc --watch",
+    "lint": "eslint src",
+    "wp": "webpack",
+    "wpw": "webpack --watch",
+    "serve": "http-server build"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^3.7.1",
+    "@typescript-eslint/parser": "^3.7.1",
+    "copy-webpack-plugin": "^6.0.3",
+    "eslint": "^7.5.0",
+    "eslint-plugin-import": "^2.22.0",
+    "prettier": "^2.0.5",
+    "ts-loader": "^8.0.1",
+    "typescript": "^3.9.7",
+    "webpack": "^4.44.1",
+    "webpack-cli": "^3.3.12"
+  }
+}
