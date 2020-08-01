@@ -15,14 +15,19 @@
     "wpw": "webpack --watch",
     "serve": "http-server build"
   },
-  "dependencies": {},
+  "dependencies": {
+    "fp-ts": "^2.7.1",
+    "jest": "^26.2.2"
+  },
   "devDependencies": {
+    "@types/jest": "^26.0.8",
     "@typescript-eslint/eslint-plugin": "^3.7.1",
     "@typescript-eslint/parser": "^3.7.1",
     "copy-webpack-plugin": "^6.0.3",
     "eslint": "^7.5.0",
     "eslint-plugin-import": "^2.22.0",
     "prettier": "^2.0.5",
+    "ts-jest": "^26.1.4",
     "ts-loader": "^8.0.1",
     "typescript": "^3.9.7",
     "webpack": "^4.44.1",

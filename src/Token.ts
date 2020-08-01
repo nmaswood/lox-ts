@@ -1,4 +1,7 @@
-export type Token = NonLiteral | Literal;
+export interface Token {
+  line: number;
+  token: NonLiteral | Literal;
+}
 
 interface NonLiteral {
   type: "non_literal";
