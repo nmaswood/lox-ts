@@ -3,6 +3,8 @@ import * as E from "fp-ts/lib/Either";
 import { Token, NonLiteral } from "./Token";
 import { CharacterStream } from "./CharacterStream";
 import { ScanError } from "./ScanError";
+import { ONE_CHAR, TWO_CHAR, WHITE_SPACE, KEYWORDS } from "./ScannerConstants";
+import { IsChar } from "../util/IsChar";
 
 interface ScanContext {
   stream: CharacterStream;
@@ -14,9 +16,9 @@ interface ScanContext {
 export function scan(input: string): E.Either<ScanError[], Token[]> {
   const context: ScanContext = {
     stream: new CharacterStream(input),
+    line: 0,
     tokens: [],
     errors: [],
-    line: 0,
   };
 
   while (context.stream.hasNext()) {
@@ -42,6 +44,8 @@ export function scan(input: string): E.Either<ScanError[], Token[]> {
       Handler.forString(context);
     } else if (Number.isInteger(char)) {
       Handler.forNumber(context);
+    } else if (IsChar.alpha(char)) {
+      Handler.forReserved(context);
     } else {
       context.errors.push({
         line: context.line,
@@ -54,21 +58,6 @@ export function scan(input: string): E.Either<ScanError[], Token[]> {
     ? E.right(context.tokens)
     : E.left(context.errors);
 }
-
-const ONE_CHAR: Map<string, Token["token"]> = new Map([
-  ["(", { type: "non_literal", kind: "LEFT_PAREN" }],
-  [")", { type: "non_literal", kind: "RIGHT_PAREN" }],
-  ["{", { type: "non_literal", kind: "LEFT_BRACE" }],
-  ["}", { type: "non_literal", kind: "RIGHT_BRACE" }],
-  [",", { type: "non_literal", kind: "COMMA" }],
-  [".", { type: "non_literal", kind: "DOT" }],
-  ["-", { type: "non_literal", kind: "MINUS" }],
-  ["+", { type: "non_literal", kind: "PLUS" }],
-  [";", { type: "non_literal", kind: "SEMICOLON" }],
-  ["*", { type: "non_literal", kind: "STAR" }],
-]);
-const TWO_CHAR: Set<string> = new Set(["!", "=", "<", ">"]);
-const WHITE_SPACE: Set<string> = new Set([" ", "\r", "\t"]);
 
 class Handler {
   static forTwoCharacterTokens(
@@ -196,6 +185,26 @@ class Handler {
             value: asNumber,
           },
         },
+      });
+    }
+  }
+
+  static forReserved({ stream, line, errors, tokens }: ScanContext) {
+    const startIndex = stream.index;
+    while (IsChar.alphaNumeric(stream.peek())) {
+      stream.advance();
+    }
+    const word = stream.input.slice(startIndex, stream.index);
+    const token = KEYWORDS.get(word);
+    if (token === undefined) {
+      errors.push({
+        line,
+        message: `Could not identify keyword ${token}`,
+      });
+    } else {
+      tokens.push({
+        line,
+        token,
       });
     }
   }
