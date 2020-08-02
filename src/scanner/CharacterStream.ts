@@ -1,27 +1,33 @@
 export class CharacterStream {
-  private input: string;
-  private offset: number;
+  public input: string;
+  public index = 0;
 
-  constructor(input: string, offset = 0) {
+  constructor(input: string) {
     this.input = input;
-    this.offset = offset;
-  }
-
-  clone(): CharacterStream {
-    return new CharacterStream(this.input, this.offset);
   }
 
   hasNext(): boolean {
-    return this.offset < this.input.length;
+    return this.index < this.input.length;
   }
 
-  next(): string | undefined {
-    const value = this.input[this.offset];
-    this.offset++;
+  peek(): string {
+    const value = this.input[this.index];
+    if (value === undefined) {
+      throw new Error("char should not be undefined");
+    }
     return value;
   }
 
-  peek(): string | undefined {
-    return this.input[this.offset + 1];
+  peekNext(): string | undefined {
+    return this.input[this.index + 1];
+  }
+
+  advance(): string {
+    const value = this.input[this.index];
+    this.index++;
+    if (value === undefined) {
+      throw new Error("char should not be undefined");
+    }
+    return value;
   }
 }

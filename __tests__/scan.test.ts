@@ -1,6 +1,6 @@
 import * as E from "fp-ts/lib/Either";
 
-import { scan } from "../src/scan";
+import { scan } from "../src/scanner/scan";
 
 const CASES: {
   input: string;
