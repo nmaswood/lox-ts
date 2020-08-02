@@ -3,7 +3,7 @@ export interface Token {
   token: NonLiteral | Literal;
 }
 
-interface NonLiteral {
+export interface NonLiteral {
   type: "non_literal";
   kind:
     | "LEFT_PAREN"
