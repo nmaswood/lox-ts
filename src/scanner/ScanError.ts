@@ -1,4 +1,4 @@
-export interface ParseError {
+export interface ScanError {
   line: number;
   message: string;
 }
