@@ -44,19 +44,28 @@ export interface NonLiteral {
     | "EOF";
 }
 
-interface Literal {
+export type Literal = Identifier | String_ | Number_;
+
+export interface Identifier {
   type: "literal";
-  value:
-    | {
-        kind: "IDENTIFIER";
-        value: string;
-      }
-    | {
-        kind: "STRING";
-        value: string;
-      }
-    | {
-        kind: "NUMBER";
-        value: number;
-      };
+  value: {
+    kind: "IDENTIFIER";
+    value: string;
+  };
+}
+
+export interface String_ {
+  type: "literal";
+  value: {
+    kind: "STRING";
+    value: string;
+  };
+}
+
+export interface Number_ {
+  type: "literal";
+  value: {
+    kind: "NUMBER";
+    value: number;
+  };
 }
