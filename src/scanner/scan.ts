@@ -21,6 +21,8 @@ export function scan(input: string): E.Either<ScanError[], Token[]> {
     errors: [],
   };
 
+  debugger;
+
   while (context.stream.hasNext()) {
     const char = context.stream.advance();
     if (ONE_CHAR.has(char)) {
@@ -154,6 +156,7 @@ class Handler {
 
   static forNumber({ stream, line, errors, tokens }: ScanContext) {
     const startIndex = stream.index;
+    debugger;
 
     while (Number.isInteger(stream.peek())) {
       stream.advance();
@@ -166,6 +169,7 @@ class Handler {
         stream.advance();
       }
     }
+    console.log(stream);
 
     const number = stream.input.slice(startIndex, stream.index);
 
@@ -190,7 +194,7 @@ class Handler {
   }
 
   static forReserved({ stream, line, errors, tokens }: ScanContext) {
-    const startIndex = stream.index;
+    const startIndex = stream.index - 1;
     while (IsChar.alphaNumeric(stream.peek())) {
       stream.advance();
     }

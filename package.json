@@ -13,7 +13,8 @@
     "lint": "eslint src",
     "wp": "webpack",
     "wpw": "webpack --watch",
-    "serve": "http-server build"
+    "test": "jest",
+    "test:debug": "node --inspect-brk node_modules/.bin/jest"
   },
   "dependencies": {
     "fp-ts": "^2.7.1",

@@ -1,13 +1,13 @@
 export class IsChar {
   static alphaNumeric(c: string): boolean {
-    return IsChar.alpha(c) || IsChar.numeric(c);
+    return /^[a-z0-9]+$/i.test(c);
   }
 
   static alpha(c: string): boolean {
-    return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || c == "_";
+    return /^[A-Z]$/i.test(c);
   }
 
   static numeric(c: string): boolean {
-    return Number.isInteger(c);
+    return !Number.isNaN(Number(c));
   }
 }
