@@ -19,35 +19,27 @@ const CASES: {
       {
         line: 0,
         token: {
-          type: "non_literal",
-          kind: "VAR",
+          type: "var",
         },
       },
       {
         line: 0,
         token: {
-          type: "literal",
-          value: {
-            kind: "IDENTIFIER",
-            value: "x",
-          },
+          type: "identifier",
+          value: "x",
         },
       },
       {
         line: 0,
         token: {
-          type: "non_literal",
-          kind: "EQUAL",
+          type: "equal",
         },
       },
       {
         line: 0,
         token: {
-          type: "literal",
-          value: {
-            kind: "NUMBER",
-            value: 10,
-          },
+          type: "number",
+          value: 10,
         },
       },
     ]),
@@ -59,35 +51,27 @@ const CASES: {
       {
         line: 0,
         token: {
-          type: "non_literal",
-          kind: "VAR",
+          type: "var",
         },
       },
       {
         line: 0,
         token: {
-          type: "literal",
-          value: {
-            kind: "IDENTIFIER",
-            value: "x",
-          },
+          type: "identifier",
+          value: "x",
         },
       },
       {
         line: 0,
         token: {
-          type: "non_literal",
-          kind: "EQUAL",
+          type: "equal",
         },
       },
       {
         line: 0,
         token: {
-          type: "literal",
-          value: {
-            kind: "STRING",
-            value: "hello world",
-          },
+          type: "string",
+          value: "hello world",
         },
       },
     ]),
@@ -99,46 +83,35 @@ const CASES: {
       {
         line: 0,
         token: {
-          type: "literal",
-          value: {
-            kind: "IDENTIFIER",
-            value: "x",
-          },
+          type: "identifier",
+          value: "x",
         },
       },
       {
         line: 0,
         token: {
-          type: "non_literal",
-          kind: "EQUAL",
+          type: "equal",
         },
       },
 
       {
         line: 0,
         token: {
-          type: "literal",
-          value: {
-            kind: "IDENTIFIER",
-            value: "x",
-          },
+          type: "identifier",
+          value: "x",
         },
       },
       {
         line: 0,
         token: {
-          type: "non_literal",
-          kind: "MINUS",
+          type: "minus",
         },
       },
       {
         line: 0,
         token: {
-          type: "literal",
-          value: {
-            kind: "NUMBER",
-            value: 1,
-          },
+          type: "number",
+          value: 1,
         },
       },
     ]),
@@ -150,46 +123,38 @@ const CASES: {
       {
         line: 0,
         token: {
-          type: "non_literal",
-          kind: "FUN",
+          type: "fun",
         },
       },
       {
         line: 0,
         token: {
-          type: "literal",
-          value: {
-            kind: "IDENTIFIER",
-            value: "identifier",
-          },
+          type: "identifier",
+          value: "identifier",
         },
       },
       {
         line: 0,
         token: {
-          type: "non_literal",
-          kind: "LEFT_PAREN",
+          type: "left_paren",
         },
       },
       {
         line: 0,
         token: {
-          type: "non_literal",
-          kind: "RIGHT_PAREN",
+          type: "right_paren",
         },
       },
       {
         line: 0,
         token: {
-          type: "non_literal",
-          kind: "LEFT_BRACE",
+          type: "left_brace",
         },
       },
       {
         line: 0,
         token: {
-          type: "non_literal",
-          kind: "RIGHT_BRACE",
+          type: "right_brace",
         },
       },
     ]),
@@ -203,46 +168,38 @@ const CASES: {
       {
         line: 0,
         token: {
-          type: "non_literal",
-          kind: "FUN",
+          type: "fun",
         },
       },
       {
         line: 0,
         token: {
-          type: "literal",
-          value: {
-            kind: "IDENTIFIER",
-            value: "identifier",
-          },
+          type: "identifier",
+          value: "identifier",
         },
       },
       {
         line: 0,
         token: {
-          type: "non_literal",
-          kind: "LEFT_PAREN",
+          type: "left_paren",
         },
       },
       {
         line: 0,
         token: {
-          type: "non_literal",
-          kind: "RIGHT_PAREN",
+          type: "right_paren",
         },
       },
       {
         line: 1,
         token: {
-          type: "non_literal",
-          kind: "LEFT_BRACE",
+          type: "left_brace",
         },
       },
       {
         line: 2,
         token: {
-          type: "non_literal",
-          kind: "RIGHT_BRACE",
+          type: "right_brace",
         },
       },
     ]),
@@ -255,35 +212,27 @@ const CASES: {
       {
         line: 0,
         token: {
-          type: "non_literal",
-          kind: "VAR",
+          type: "var",
         },
       },
       {
         line: 0,
         token: {
-          type: "literal",
-          value: {
-            kind: "IDENTIFIER",
-            value: "x",
-          },
+          type: "identifier",
+          value: "x",
         },
       },
       {
         line: 0,
         token: {
-          type: "non_literal",
-          kind: "EQUAL",
+          type: "equal",
         },
       },
       {
         line: 0,
         token: {
-          type: "literal",
-          value: {
-            kind: "NUMBER",
-            value: 10,
-          },
+          type: "number",
+          value: 10,
         },
       },
     ]),

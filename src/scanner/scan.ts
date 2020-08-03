@@ -65,44 +65,44 @@ class Handler {
     char: string
   ) {
     const nextChar = stream.peekNext();
-    const withLineNumber = NonLiteralBuilder.withLineNumber(line);
+    const fromType = fromLine(line);
     switch (char) {
       case "!":
         if (nextChar === "=") {
-          tokens.push(withLineNumber("BANG_EQUAL"));
+          tokens.push(fromType("bang_equal"));
           stream.advance();
         } else {
-          tokens.push(withLineNumber("BANG_EQUAL"));
+          tokens.push(fromType("bang_equal"));
         }
         break;
       case "=":
         if (nextChar === "==") {
-          tokens.push(withLineNumber("EQUAL_EQUAL"));
+          tokens.push(fromType("equal_equal"));
           stream.advance();
         } else {
-          tokens.push(withLineNumber("EQUAL"));
+          tokens.push(fromType("equal"));
         }
         break;
       case "<":
         if (nextChar === "=") {
-          tokens.push(withLineNumber("LESS_EQUAL"));
+          tokens.push(fromType("less_equal"));
           stream.advance();
         } else {
-          tokens.push(withLineNumber("LESS"));
+          tokens.push(fromType("less"));
         }
         break;
       case ">":
         if (nextChar === "=") {
           tokens.push({
             line,
-            token: { type: "non_literal", kind: "LESS_EQUAL" },
+            token: { type: "less_equal" },
           });
 
           stream.advance();
         } else {
           tokens.push({
             line,
-            token: { type: "non_literal", kind: "LESS" },
+            token: { type: "less" },
           });
         }
         break;
@@ -117,7 +117,7 @@ class Handler {
         stream.advance();
       }
     } else {
-      tokens.push(NonLiteralBuilder.withLineNumber(line)("SLASH"));
+      tokens.push(fromLine(line)("slash"));
     }
   }
 
@@ -148,11 +148,8 @@ class Handler {
     tokens.push({
       line: context.line,
       token: {
-        type: "literal",
-        value: {
-          kind: "STRING",
-          value,
-        },
+        type: "string",
+        value,
       },
     });
   }
@@ -189,11 +186,8 @@ class Handler {
       tokens.push({
         line,
         token: {
-          type: "literal",
-          value: {
-            kind: "NUMBER",
-            value: asNumber,
-          },
+          type: "number",
+          value: asNumber,
         },
       });
     }
@@ -210,11 +204,8 @@ class Handler {
       tokens.push({
         line,
         token: {
-          type: "literal",
-          value: {
-            kind: "IDENTIFIER",
-            value: word,
-          },
+          type: "identifier",
+          value: word,
         },
       });
     } else {
@@ -226,14 +217,16 @@ class Handler {
   }
 }
 
-class NonLiteralBuilder {
-  static withLineNumber(line: number) {
-    return (kind: NonLiteral["kind"]): Token => ({
+function fromLine(line: number) {
+  return function fromType(
+    type: NonLiteral["type"]
+  ): {
+    line: number;
+    token: NonLiteral;
+  } {
+    return {
       line,
-      token: {
-        type: "non_literal",
-        kind,
-      },
-    });
-  }
+      token: { type } as NonLiteral,
+    };
+  };
 }
