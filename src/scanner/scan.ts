@@ -21,8 +21,6 @@ export function scan(input: string): E.Either<ScanError[], Token[]> {
     errors: [],
   };
 
-  debugger;
-
   while (context.stream.hasNext()) {
     const char = context.stream.advance();
     if (ONE_CHAR.has(char)) {
@@ -44,10 +42,10 @@ export function scan(input: string): E.Either<ScanError[], Token[]> {
       context.line++;
     } else if (char === '"') {
       Handler.forString(context);
-    } else if (Number.isInteger(char)) {
+    } else if (IsChar.numeric(char)) {
       Handler.forNumber(context);
     } else if (IsChar.alpha(char)) {
-      Handler.forReserved(context);
+      Handler.forReservedAndIdentifier(context);
     } else {
       context.errors.push({
         line: context.line,
@@ -155,25 +153,28 @@ class Handler {
   }
 
   static forNumber({ stream, line, errors, tokens }: ScanContext) {
-    const startIndex = stream.index;
-    debugger;
-
-    while (Number.isInteger(stream.peek())) {
+    const startIndex = stream.index - 1;
+    while (stream.hasNext() && IsChar.numeric(stream.peek())) {
       stream.advance();
     }
 
-    if (stream.peek() === "." && Number.isInteger(stream.peekNext())) {
-      stream.advance();
-
-      while (Number.isInteger(stream.peek())) {
+    if (stream.hasNext()) {
+      const peekedNext = stream.peekNext();
+      if (
+        stream.peek() === "." &&
+        peekedNext !== undefined &&
+        IsChar.numeric(peekedNext)
+      ) {
         stream.advance();
+
+        while (Number.isInteger(stream.peek())) {
+          stream.advance();
+        }
       }
     }
-    console.log(stream);
-
     const number = stream.input.slice(startIndex, stream.index);
-
     const asNumber = Number(number);
+
     if (Number.isNaN(number)) {
       errors.push({
         line,
@@ -193,7 +194,12 @@ class Handler {
     }
   }
 
-  static forReserved({ stream, line, errors, tokens }: ScanContext) {
+  static forReservedAndIdentifier({
+    stream,
+    line,
+    errors,
+    tokens,
+  }: ScanContext) {
     const startIndex = stream.index - 1;
     while (IsChar.alphaNumeric(stream.peek())) {
       stream.advance();
@@ -201,9 +207,15 @@ class Handler {
     const word = stream.input.slice(startIndex, stream.index);
     const token = KEYWORDS.get(word);
     if (token === undefined) {
-      errors.push({
+      tokens.push({
         line,
-        message: `Could not identify keyword ${token}`,
+        token: {
+          type: "literal",
+          value: {
+            kind: "IDENTIFIER",
+            value: word,
+          },
+        },
       });
     } else {
       tokens.push({
