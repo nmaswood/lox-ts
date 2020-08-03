@@ -124,14 +124,19 @@ class Handler {
   static forString(context: ScanContext) {
     const { stream, errors, tokens } = context;
     const startIndex = stream.index;
-    while (stream.peek() != '"' && stream.hasNext()) {
+    let seenEndQuote = false;
+    while (stream.hasNext() && !seenEndQuote) {
       if (stream.peek() === "\n") {
         context.line++;
+      }
+
+      if (stream.peek() === '"') {
+        seenEndQuote = true;
       }
       stream.advance();
     }
 
-    if (!stream.hasNext()) {
+    if (!seenEndQuote) {
       errors.push({
         line: context.line,
         message: "Unterminated string",
@@ -139,7 +144,7 @@ class Handler {
       return;
     }
 
-    const value = stream.input.slice(startIndex, stream.index);
+    const value = stream.input.slice(startIndex, stream.index - 1);
     tokens.push({
       line: context.line,
       token: {

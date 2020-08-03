@@ -259,7 +259,8 @@ let CASES: {
     ]),
   },
 ];
-CASES = [CASES[1]];
+
+CASES = [CASES[2]];
 
 describe("scan", () => {
   CASES.forEach(({ input, expected, description }) => {
