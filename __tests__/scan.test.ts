@@ -10,7 +10,7 @@ const CASES: {
   {
     description: "empty input",
     input: "",
-    expected: E.right([]),
+    expected: E.right([{ line: 0, token: { type: "eof" } }]),
   },
   {
     description: "variable assigned to number",
@@ -42,6 +42,7 @@ const CASES: {
           value: 10,
         },
       },
+      { line: 0, token: { type: "eof" } },
     ]),
   },
   {
@@ -74,6 +75,7 @@ const CASES: {
           value: "hello world",
         },
       },
+      { line: 0, token: { type: "eof" } },
     ]),
   },
   {
@@ -114,6 +116,7 @@ const CASES: {
           value: 1,
         },
       },
+      { line: 0, token: { type: "eof" } },
     ]),
   },
   {
@@ -157,6 +160,7 @@ const CASES: {
           type: "right_brace",
         },
       },
+      { line: 0, token: { type: "eof" } },
     ]),
   },
   {
@@ -202,6 +206,7 @@ const CASES: {
           type: "right_brace",
         },
       },
+      { line: 2, token: { type: "eof" } },
     ]),
   },
   {
@@ -235,6 +240,7 @@ const CASES: {
           value: 10,
         },
       },
+      { line: 1, token: { type: "eof" } },
     ]),
   },
 ];

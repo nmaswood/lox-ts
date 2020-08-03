@@ -53,9 +53,11 @@ export function scan(input: string): E.Either<ScanError[], Token[]> {
     }
   }
 
-  return context.errors.length === 0
-    ? E.right(context.tokens)
-    : E.left(context.errors);
+  if (context.errors.length !== 0) {
+    return E.left(context.errors);
+  }
+  context.tokens.push({ line: context.line, token: { type: "eof" } });
+  return E.right(context.tokens);
 }
 
 class Handler {
