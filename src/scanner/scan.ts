@@ -5,6 +5,7 @@ import { CharacterStream } from "./CharacterStream";
 import { ScanError } from "./ScanError";
 import { ONE_CHAR, TWO_CHAR, WHITE_SPACE, KEYWORDS } from "./ScannerConstants";
 import { IsChar } from "../util/IsChar";
+import { panic } from "../util/panic";
 
 interface ScanContext {
   stream: CharacterStream;
@@ -23,14 +24,12 @@ export function scan(input: string): E.Either<ScanError[], Token[]> {
 
   while (context.stream.hasNext()) {
     const char = context.stream.advance();
-    if (ONE_CHAR.has(char)) {
-      const token = ONE_CHAR.get(char);
-      if (token === undefined) {
-        throw new Error("Token should not be undefined");
-      }
+
+    const oneCharToken = ONE_CHAR.get(char);
+    if (oneCharToken !== undefined) {
       context.tokens.push({
         line: context.line,
-        token,
+        token: oneCharToken,
       });
     } else if (TWO_CHAR.has(char)) {
       Handler.forTwoCharacterTokens(context, char);
@@ -107,7 +106,7 @@ class Handler {
         }
         break;
       default:
-        throw new Error("This should not happen");
+        panic();
     }
   }
 
