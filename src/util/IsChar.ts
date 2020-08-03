@@ -8,6 +8,6 @@ export class IsChar {
   }
 
   static numeric(c: string): boolean {
-    return !Number.isNaN(Number(c));
+    return /^[0-9]+$/i.test(c);
   }
 }

@@ -112,8 +112,8 @@ class Handler {
   }
 
   static forComment({ stream, tokens, line }: ScanContext) {
-    if (stream.peekNext() === "/") {
-      while (stream.peek() != "\n" && stream.hasNext) {
+    if (stream.peek() === "/") {
+      while (stream.hasNext() && stream.peek() != "\n") {
         stream.advance();
       }
     } else {
@@ -172,7 +172,7 @@ class Handler {
       ) {
         stream.advance();
 
-        while (Number.isInteger(stream.peek())) {
+        while (IsChar.numeric(stream.peek())) {
           stream.advance();
         }
       }
@@ -180,7 +180,7 @@ class Handler {
     const number = stream.input.slice(startIndex, stream.index);
     const asNumber = Number(number);
 
-    if (Number.isNaN(number)) {
+    if (Number.isNaN(asNumber)) {
       errors.push({
         line,
         message: `Could not parse number from ${number}`,
@@ -199,12 +199,7 @@ class Handler {
     }
   }
 
-  static forReservedAndIdentifier({
-    stream,
-    line,
-    errors,
-    tokens,
-  }: ScanContext) {
+  static forReservedAndIdentifier({ stream, line, tokens }: ScanContext) {
     const startIndex = stream.index - 1;
     while (IsChar.alphaNumeric(stream.peek())) {
       stream.advance();

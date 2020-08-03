@@ -1,1 +1,1 @@
-console.log("hello world");
+export { scan } from "./scanner/scan";

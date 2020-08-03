@@ -1,8 +1,8 @@
 import * as E from "fp-ts/lib/Either";
 
-import { scan } from "../src/scanner/scan";
+import { scan } from "../src";
 
-let CASES: {
+const CASES: {
   description: string;
   input: string;
   expected: ReturnType<typeof scan>;
@@ -145,7 +145,7 @@ let CASES: {
   },
   {
     description: "empty function",
-    input: "func identifier(){}",
+    input: "fun identifier(){}",
     expected: E.right([
       {
         line: 0,
@@ -196,7 +196,7 @@ let CASES: {
   },
   {
     description: "empty function across new lines",
-    input: ` function identifier()
+    input: ` fun identifier()
         {
           }`,
     expected: E.right([
@@ -248,19 +248,47 @@ let CASES: {
     ]),
   },
   {
-    description: "displays a number error",
+    description: "allows comments to display",
     input: ` var x = 10
-    3.1a.  `,
-    expected: E.left([
+    // foo bar`,
+    expected: E.right([
       {
-        line: 1,
-        message: "TO DO",
+        line: 0,
+        token: {
+          type: "non_literal",
+          kind: "VAR",
+        },
+      },
+      {
+        line: 0,
+        token: {
+          type: "literal",
+          value: {
+            kind: "IDENTIFIER",
+            value: "x",
+          },
+        },
+      },
+      {
+        line: 0,
+        token: {
+          type: "non_literal",
+          kind: "EQUAL",
+        },
+      },
+      {
+        line: 0,
+        token: {
+          type: "literal",
+          value: {
+            kind: "NUMBER",
+            value: 10,
+          },
+        },
       },
     ]),
   },
 ];
-
-CASES = [CASES[2]];
 
 describe("scan", () => {
   CASES.forEach(({ input, expected, description }) => {
