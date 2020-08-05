@@ -3,7 +3,23 @@ export interface Token {
   token: NonLiteral | Literal;
 }
 
-export type Literal = Identifier | String_ | Number_;
+export type Literal = Identifier | String_ | Number_ | True | False | Nil;
+
+export type UnaryOperator = Minus | Bang;
+
+export type Operator =
+  | Minus
+  | Plus
+  | Slash
+  | Star
+  | Bang
+  | BangEqual
+  | Equal
+  | EqualEqual
+  | Greater
+  | GreaterEqual
+  | Less
+  | LessEqual;
 
 export interface Identifier {
   type: "identifier";
@@ -15,7 +31,7 @@ export interface String_ {
   value: string;
 }
 
-interface Number_ {
+export interface Number_ {
   type: "number";
   value: number;
 }

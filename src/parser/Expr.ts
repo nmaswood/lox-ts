@@ -1,6 +1,7 @@
 import * as T from "../scanner/Token";
 
 export type Expr =
+  | Assign
   | Binary
   | Call
   | Get
@@ -15,7 +16,7 @@ export type Expr =
 
 export interface Assign {
   type: "assign";
-  name: T.Token;
+  name: T.Identifier;
   value: Expr;
 }
 
@@ -23,7 +24,7 @@ export interface Binary {
   type: "binary";
   left: Expr;
   right: Expr;
-  operator: T.Token;
+  operator: T.Operator;
 }
 
 export interface Call {
@@ -36,7 +37,7 @@ export interface Call {
 export interface Get {
   type: "get";
   object: Expr;
-  name: T.Token;
+  name: T.String_;
 }
 
 export interface Grouping {
@@ -46,20 +47,20 @@ export interface Grouping {
 
 export interface Literal {
   type: "literal";
-  value: any;
+  value: T.Literal;
 }
 
 export interface Logical {
   type: "logical";
   left: Expr;
   right: Expr;
-  operator: T.Token;
+  operator: T.Operator;
 }
 
 export interface Set {
   type: "set";
   object: Expr;
-  name: T.Token;
+  name: T.String_;
   value: Expr;
 }
 
@@ -76,7 +77,7 @@ export interface This {
 
 export interface Unary {
   type: "unary";
-  operator: T.Token;
+  operator: T.UnaryOperator;
   right: Expr;
 }
 
