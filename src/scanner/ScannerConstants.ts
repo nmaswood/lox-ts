@@ -1,6 +1,6 @@
-import { NonLiteral } from "./Token";
+import { Keyword, OneCharacter } from "./Token";
 
-export const ONE_CHAR: Map<string, NonLiteral> = new Map([
+export const ONE_CHAR: Map<string, OneCharacter> = new Map([
   ["(", { type: "left_paren" }],
   [")", { type: "right_paren" }],
   ["{", { type: "left_brace" }],
@@ -14,7 +14,7 @@ export const ONE_CHAR: Map<string, NonLiteral> = new Map([
 ]);
 export const TWO_CHAR: Set<string> = new Set(["!", "=", "<", ">"]);
 export const WHITE_SPACE: Set<string> = new Set([" ", "\r", "\t"]);
-export const KEYWORDS: Map<string, NonLiteral> = new Map([
+export const KEYWORDS: Map<string, Keyword> = new Map([
   ["and", { type: "and" }],
   ["class", { type: "class" }],
   ["else", { type: "else" }],

@@ -4,15 +4,65 @@ export interface Token {
 }
 
 export type Literal = Identifier | String_ | Number_ | True | False | Nil;
+export namespace Literal {
+  export function is(t: Literal | NonLiteral): t is Literal {
+    switch (t.type) {
+      case "string":
+      case "number":
+      case "identifier":
+      case "true":
+      case "false":
+      case "nil":
+        return true;
+      default:
+        return false;
+    }
+  }
+}
 
-export type UnaryOperator = Minus | Bang;
+export type Keyword =
+  | And
+  | Class
+  | Else
+  | False
+  | For
+  | Fun
+  | If
+  | Nil
+  | Or
+  | Print
+  | Return
+  | Super
+  | This
+  | True
+  | Var
+  | While;
 
-export type Operator =
+export type OneCharacter =
+  | LeftParen
+  | RightParen
+  | LeftBrace
+  | RightBrace
+  | Comma
+  | Dot
+  | Minus
+  | Plus
+  | Semicolon
+  | Star;
+
+export type Operator = BinaryOperator | UnaryOperator;
+
+export namespace Operator {
+  export function is(x: Literal | NonLiteral): x is Operator {
+    return UnaryOperator.is(x) || BinaryOperator.is(x);
+  }
+}
+
+export type BinaryOperator =
   | Minus
   | Plus
   | Slash
   | Star
-  | Bang
   | BangEqual
   | Equal
   | EqualEqual
@@ -20,6 +70,39 @@ export type Operator =
   | GreaterEqual
   | Less
   | LessEqual;
+export namespace BinaryOperator {
+  export function is(x: Literal | NonLiteral): x is BinaryOperator {
+    switch (x.type) {
+      case "minus":
+      case "plus":
+      case "slash":
+      case "star":
+      case "bang_equal":
+      case "equal":
+      case "equal_equal":
+      case "greater":
+      case "greater_equal":
+      case "less":
+      case "less_equal":
+        return true;
+      default:
+        return false;
+    }
+  }
+}
+
+export type UnaryOperator = Minus | Bang;
+export namespace UnaryOperator {
+  export function is(t: Literal | NonLiteral): t is UnaryOperator {
+    switch (t.type) {
+      case "minus":
+      case "bang":
+        return true;
+      default:
+        return false;
+    }
+  }
+}
 
 export interface Identifier {
   type: "identifier";
@@ -179,6 +262,11 @@ interface Var {
 interface While {
   type: "while";
 }
-interface Eof {
+export interface Eof {
   type: "eof";
+}
+export namespace Eof {
+  export function is(x: NonLiteral | Literal): x is Eof {
+    return x.type === "eof";
+  }
 }

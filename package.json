@@ -9,11 +9,12 @@
   "private": true,
   "scripts": {
     "tsc": "tsc",
-    "tscw": "tsc --watch",
+    "tsc:watch": "tsc --watch",
     "lint": "eslint src",
     "wp": "webpack",
-    "wpw": "webpack --watch",
+    "wp:watch": "webpack --watch",
     "test": "jest",
+    "test:watch": "jest --watch",
     "test:debug": "node --inspect-brk node_modules/.bin/jest"
   },
   "dependencies": {

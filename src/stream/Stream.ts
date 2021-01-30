@@ -18,6 +18,14 @@ export class Stream<T> {
     return value;
   }
 
+  peekPrevious(): T {
+    const value = this.input[this.index - 1];
+    if (value === undefined) {
+      throw new Error("value should not be undefined");
+    }
+    return value;
+  }
+
   peekNext(): T | undefined {
     return this.input[this.index + 1];
   }
