@@ -1,8 +1,8 @@
 import { Token } from "../scanner/Token";
-import { Stream } from "./Stream";
+import { Stream } from "../stream/Stream";
 
 export function parse(tokens: Token[]): undefined {
-  const stream = new Stream(compareTokens, tokens);
+  const stream = new Stream(tokens);
 
   return undefined;
 }
