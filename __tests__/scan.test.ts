@@ -1,5 +1,6 @@
 import * as E from "fp-ts/lib/Either";
 
+import * as T from "../src/scanner/Token";
 import { scan } from "../src";
 
 const CASES: {
@@ -10,157 +11,53 @@ const CASES: {
   {
     description: "empty input",
     input: "",
-    expected: E.right([{ line: 0, token: { type: "eof" } }]),
+    expected: E.right([withLine(0, T.EOF)]),
   },
   {
     description: "variable assigned to number",
     input: "var x = 10",
     expected: E.right([
-      {
-        line: 0,
-        token: {
-          type: "var",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "identifier",
-          value: "x",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "equal",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "number",
-          value: 10,
-        },
-      },
-      { line: 0, token: { type: "eof" } },
+      withLine(0, T.VAR),
+      withLine(0, T.Identifier.of("x")),
+      withLine(0, T.EQUAL),
+      withLine(0, T.Number_.of(10)),
+      withLine(0, T.EOF),
     ]),
   },
   {
     description: "varible assigned to string",
     input: 'var x = "hello world"',
     expected: E.right([
-      {
-        line: 0,
-        token: {
-          type: "var",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "identifier",
-          value: "x",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "equal",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "string",
-          value: "hello world",
-        },
-      },
-      { line: 0, token: { type: "eof" } },
+      withLine(0, T.VAR),
+      withLine(0, T.Identifier.of("x")),
+      withLine(0, T.EQUAL),
+      withLine(0, T.String_.of("hello world")),
+      withLine(0, T.EOF),
     ]),
   },
   {
     description: "simple variable expression",
     input: "x = x - 1",
     expected: E.right([
-      {
-        line: 0,
-        token: {
-          type: "identifier",
-          value: "x",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "equal",
-        },
-      },
-
-      {
-        line: 0,
-        token: {
-          type: "identifier",
-          value: "x",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "minus",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "number",
-          value: 1,
-        },
-      },
-      { line: 0, token: { type: "eof" } },
+      withLine(0, T.Identifier.of("x")),
+      withLine(0, T.EQUAL),
+      withLine(0, T.Identifier.of("x")),
+      withLine(0, T.MINUS),
+      withLine(0, T.Number_.of(1)),
+      withLine(0, T.EOF),
     ]),
   },
   {
     description: "empty function",
     input: "fun identifier(){}",
     expected: E.right([
-      {
-        line: 0,
-        token: {
-          type: "fun",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "identifier",
-          value: "identifier",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "left_paren",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "right_paren",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "left_brace",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "right_brace",
-        },
-      },
-      { line: 0, token: { type: "eof" } },
+      withLine(0, T.FUN),
+      withLine(0, T.Identifier.of("identifier")),
+      withLine(0, T.LEFT_PAREN),
+      withLine(0, T.RIGHT_PAREN),
+      withLine(0, T.LEFT_BRACE),
+      withLine(0, T.RIGHT_BRACE),
+      withLine(0, T.EOF),
     ]),
   },
   {
@@ -169,44 +66,13 @@ const CASES: {
         {
           }`,
     expected: E.right([
-      {
-        line: 0,
-        token: {
-          type: "fun",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "identifier",
-          value: "identifier",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "left_paren",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "right_paren",
-        },
-      },
-      {
-        line: 1,
-        token: {
-          type: "left_brace",
-        },
-      },
-      {
-        line: 2,
-        token: {
-          type: "right_brace",
-        },
-      },
-      { line: 2, token: { type: "eof" } },
+      withLine(0, T.FUN),
+      withLine(0, T.Identifier.of("identifier")),
+      withLine(0, T.LEFT_PAREN),
+      withLine(0, T.RIGHT_PAREN),
+      withLine(1, T.LEFT_BRACE),
+      withLine(2, T.RIGHT_BRACE),
+      withLine(2, T.EOF),
     ]),
   },
   {
@@ -214,33 +80,11 @@ const CASES: {
     input: ` var x = 10
     // foo bar`,
     expected: E.right([
-      {
-        line: 0,
-        token: {
-          type: "var",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "identifier",
-          value: "x",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "equal",
-        },
-      },
-      {
-        line: 0,
-        token: {
-          type: "number",
-          value: 10,
-        },
-      },
-      { line: 1, token: { type: "eof" } },
+      withLine(0, T.VAR),
+      withLine(0, T.Identifier.of("x")),
+      withLine(0, T.EQUAL),
+      withLine(0, T.Number_.of(10)),
+      withLine(1, T.EOF),
     ]),
   },
 ];
@@ -252,3 +96,10 @@ describe("scan", () => {
     });
   });
 });
+
+function withLine(line: number, token: T.TokenElement): T.Token {
+  return {
+    line,
+    token,
+  };
+}

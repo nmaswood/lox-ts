@@ -1,6 +1,5 @@
 import * as E from "fp-ts/lib/Either";
-
-import { Token, NonLiteral } from "./Token";
+import * as T from "./Token";
 import { CharacterStream } from "./CharacterStream";
 import { ScanError } from "./ScanError";
 import { ONE_CHAR, TWO_CHAR, WHITE_SPACE, KEYWORDS } from "./ScannerConstants";
@@ -10,11 +9,11 @@ import { panic } from "../util/panic";
 interface ScanContext {
   stream: CharacterStream;
   line: number;
-  tokens: Token[];
+  tokens: T.Token[];
   errors: ScanError[];
 }
 
-export function scan(input: string): E.Either<ScanError[], Token[]> {
+export function scan(input: string): E.Either<ScanError[], T.Token[]> {
   const context: ScanContext = {
     stream: new CharacterStream(input),
     line: 0,
@@ -56,7 +55,7 @@ export function scan(input: string): E.Either<ScanError[], Token[]> {
   if (context.errors.length !== 0) {
     return E.left(context.errors);
   }
-  context.tokens.push({ line: context.line, token: { type: "eof" } });
+  context.tokens.push({ line: context.line, token: T.EOF });
   return E.right(context.tokens);
 }
 
@@ -66,45 +65,39 @@ class Handler {
     char: string
   ) {
     const nextChar = stream.peekNext();
-    const fromType = fromLine(line);
+    const withLine = fromLine(line);
     switch (char) {
       case "!":
         if (nextChar === "=") {
-          tokens.push(fromType("bang_equal"));
+          tokens.push(withLine(T.BANG_EQUAL));
           stream.advance();
         } else {
-          tokens.push(fromType("bang_equal"));
+          tokens.push(withLine(T.BANG));
         }
         break;
       case "=":
         if (nextChar === "==") {
-          tokens.push(fromType("equal_equal"));
+          tokens.push(withLine(T.EQUAL_EQUAL));
           stream.advance();
         } else {
-          tokens.push(fromType("equal"));
+          tokens.push(withLine(T.EQUAL));
         }
         break;
       case "<":
         if (nextChar === "=") {
-          tokens.push(fromType("less_equal"));
+          tokens.push(withLine(T.LESS_EQUAL));
           stream.advance();
         } else {
-          tokens.push(fromType("less"));
+          tokens.push(withLine(T.LESS));
         }
         break;
       case ">":
         if (nextChar === "=") {
-          tokens.push({
-            line,
-            token: { type: "less_equal" },
-          });
+          tokens.push(withLine(T.GREATER_EQUAL));
 
           stream.advance();
         } else {
-          tokens.push({
-            line,
-            token: { type: "less" },
-          });
+          tokens.push(withLine(T.GREATER_EQUAL));
         }
         break;
       default:
@@ -118,7 +111,7 @@ class Handler {
         stream.advance();
       }
     } else {
-      tokens.push(fromLine(line)("slash"));
+      tokens.push(fromLine(line)(T.SLASH));
     }
   }
 
@@ -148,10 +141,7 @@ class Handler {
     const value = stream.input.slice(startIndex, stream.index - 1);
     tokens.push({
       line: context.line,
-      token: {
-        type: "string",
-        value,
-      },
+      token: T.String_.of(value),
     });
   }
 
@@ -186,10 +176,7 @@ class Handler {
     } else {
       tokens.push({
         line,
-        token: {
-          type: "number",
-          value: asNumber,
-        },
+        token: T.Number_.of(asNumber),
       });
     }
   }
@@ -204,10 +191,7 @@ class Handler {
     if (token === undefined) {
       tokens.push({
         line,
-        token: {
-          type: "identifier",
-          value: word,
-        },
+        token: T.Identifier.of(word),
       });
     } else {
       tokens.push({
@@ -219,15 +203,8 @@ class Handler {
 }
 
 function fromLine(line: number) {
-  return function fromType(
-    type: NonLiteral["type"]
-  ): {
-    line: number;
-    token: NonLiteral;
-  } {
-    return {
-      line,
-      token: { type } as NonLiteral,
-    };
-  };
+  return (token: T.NonLiteral): T.Token => ({
+    line,
+    token,
+  });
 }
