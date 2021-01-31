@@ -3,6 +3,7 @@ import * as E from "fp-ts/lib/Either";
 import { parse } from "../src";
 import * as S from "../src/parser/Stmt";
 import * as T from "../src/scanner/Token";
+import * as Ex from "../src/parser/Expr";
 
 interface Case {
   description: string;
@@ -17,7 +18,7 @@ const CASES: Case[] = [
     expected: E.right([]),
   },
   {
-    description: "var xyz = 123",
+    description: "var xyz = 1",
     input: [
       withLine(T.VAR),
       withLine(T.Identifier.of("xyz")),
@@ -27,22 +28,57 @@ const CASES: Case[] = [
       withLine(T.EOF),
     ],
     expected: E.right([
-      S.Expr.of({
-        type: "assign",
-        name: {
-          type: "identifier",
-          value: "xyz",
-        },
-        value: {
-          type: "literal",
-          value: {
-            type: "number",
-            value: 1,
-          },
-        },
-      }),
+      S.Expr.of(
+        Ex.Assign.of(T.Identifier.of("xyz"), Ex.Literal.of(T.Number_.of(1)))
+      ),
     ]),
   },
+  {
+    description: "var xyz = !false;",
+    input: [
+      withLine(T.VAR),
+      withLine(T.Identifier.of("xyz")),
+      withLine(T.EQUAL),
+      withLine(T.BANG),
+      withLine(T.FALSE),
+      withLine(T.SEMICOLON),
+      withLine(T.EOF),
+    ],
+    expected: E.right([
+      S.Expr.of(
+        Ex.Assign.of(
+          T.Identifier.of("xyz"),
+          Ex.Unary.of(T.BANG, Ex.Literal.of(T.FALSE))
+        )
+      ),
+    ]),
+  },
+  // {
+  //   description: "var xyz = false and false;",
+  //   input: [
+  //     withLine(T.VAR),
+  //     withLine(T.Identifier.of("xyz")),
+  //     withLine(T.EQUAL),
+  //     withLine(T.BANG),
+  //     withLine(T.FALSE),
+  //     withLine(T.AND),
+  //     withLine(T.FALSE),
+  //     withLine(T.SEMICOLON),
+  //     withLine(T.EOF),
+  //   ],
+  //   expected: E.right([
+  //     S.Expr.of(
+  //       Ex.Assign.of(
+  //         T.Identifier.of("xyz"),
+  //         Ex.Binary.of(T.AND,
+  //           Ex.Literal.of(T.FALSE),
+  //           Ex.Literal.of(T.FALSE)
+  //           )
+  //       )
+  //     ),
+  //   ]),
+  // },
+
   // {
   //   description: "var xyz = !false",
   //   input: [

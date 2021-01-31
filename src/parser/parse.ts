@@ -62,6 +62,8 @@ namespace Handler {
     if (T.Literal.is(token.token)) {
       return E.right(S.Expr.of(Ex.Literal.of(token.token)));
     } else if (T.UnaryOperator.is(token.token)) {
+      // pass
+
       const rest = forExpression(context);
       if (E.isLeft(rest)) {
         return rest;

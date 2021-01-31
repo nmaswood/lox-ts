@@ -2,11 +2,18 @@ export interface Token {
   line: number;
   token: TokenElement;
 }
+export namespace Token {
+  export const of = (line: number, token: TokenElement): Token => ({
+    line,
+    token,
+  });
+}
+
 export type TokenElement = NonLiteral | Literal;
 
 export type Literal = Identifier | String_ | Number_ | True | False | Nil;
 export namespace Literal {
-  export function is(t: Literal | NonLiteral): t is Literal {
+  export function is(t: TokenElement): t is Literal {
     switch (t.type) {
       case "string":
       case "number":
@@ -70,10 +77,12 @@ export type BinaryOperator =
   | Greater
   | GreaterEqual
   | Less
+  | Or
+  | And
   | LessEqual;
 
 export namespace BinaryOperator {
-  export function is(x: Literal | NonLiteral): x is BinaryOperator {
+  export function is(x: TokenElement): x is BinaryOperator {
     switch (x.type) {
       case "minus":
       case "plus":
@@ -86,6 +95,8 @@ export namespace BinaryOperator {
       case "greater_equal":
       case "less":
       case "less_equal":
+      case "and":
+      case "or":
         return true;
       default:
         return false;

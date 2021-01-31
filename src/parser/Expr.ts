@@ -29,15 +29,15 @@ export namespace Assign {
 
 export interface Binary {
   type: "binary";
+  operator: T.Operator;
   left: Expr;
   right: Expr;
-  operator: T.Operator;
 }
 export namespace Binary {
   export const of = (
+    operator: T.Operator,
     left: Expr,
-    right: Expr,
-    operator: T.Operator
+    right: Expr
   ): Binary => ({
     type: "binary",
     left,

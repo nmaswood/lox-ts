@@ -64,7 +64,7 @@ class Handler {
     { stream, tokens, line }: ScanContext,
     char: string
   ) {
-    const nextChar = stream.peekNext();
+    const nextChar = stream.peek();
     const withLine = fromLine(line);
     switch (char) {
       case "!":
@@ -76,7 +76,7 @@ class Handler {
         }
         break;
       case "=":
-        if (nextChar === "==") {
+        if (nextChar === "=") {
           tokens.push(withLine(T.EQUAL_EQUAL));
           stream.advance();
         } else {
@@ -97,7 +97,7 @@ class Handler {
 
           stream.advance();
         } else {
-          tokens.push(withLine(T.GREATER_EQUAL));
+          tokens.push(withLine(T.GREATER));
         }
         break;
       default:
@@ -160,7 +160,7 @@ class Handler {
       ) {
         stream.advance();
 
-        while (IsChar.numeric(stream.peek())) {
+        while (stream.hasNext() && IsChar.numeric(stream.peek())) {
           stream.advance();
         }
       }
@@ -183,21 +183,15 @@ class Handler {
 
   static forReservedAndIdentifier({ stream, line, tokens }: ScanContext) {
     const startIndex = stream.index - 1;
-    while (IsChar.alphaNumeric(stream.peek())) {
+    while (stream.hasNext() && IsChar.alphaNumeric(stream.peek())) {
       stream.advance();
     }
     const word = stream.input.slice(startIndex, stream.index);
     const token = KEYWORDS.get(word);
     if (token === undefined) {
-      tokens.push({
-        line,
-        token: T.Identifier.of(word),
-      });
+      tokens.push(T.Token.of(line, T.Identifier.of(word)));
     } else {
-      tokens.push({
-        line,
-        token,
-      });
+      tokens.push(T.Token.of(line, token));
     }
   }
 }
