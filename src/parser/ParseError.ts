@@ -1,15 +1,18 @@
-import { Token } from "../scanner/Token";
+import { Token, TokenElement } from "./../scanner/Token";
 
 export interface ParseError {
   token: Token;
-  message: string;
+  expected: TokenElement["type"][];
 }
 
 export namespace ParseError {
-  export function of(token: Token, message = "Undefined error"): ParseError {
+  export function of(
+    token: Token,
+    expected: TokenElement["type"][]
+  ): ParseError {
     return {
       token,
-      message,
+      expected,
     };
   }
 }
