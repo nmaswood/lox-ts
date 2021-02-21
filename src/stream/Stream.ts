@@ -18,6 +18,10 @@ export class Stream<T> {
     return value;
   }
 
+  safePeek(): T | undefined {
+    return this.input[this.index];
+  }
+
   peekPrevious(): T {
     const value = this.input[this.index - 1];
     if (value === undefined) {

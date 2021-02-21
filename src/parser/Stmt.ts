@@ -1,7 +1,16 @@
 import * as Expression from "./Expr";
 import * as T from "../scanner/Token";
 
-export type Stmt = Expr | Block | Function_ | If | Print | Return | Var | While;
+export type Stmt =
+  | Expr
+  | Block
+  | Function_
+  | If
+  | Print
+  | Return
+  | Var
+  | While
+  | For;
 
 export interface Expr {
   type: "expression";
@@ -56,14 +65,14 @@ export interface If {
   type: "if";
   condition: Expression.Expr;
   then: Stmt[];
-  else_: Stmt[];
+  else_: Stmt[] | undefined;
 }
 
 export namespace If {
   export const of = (
     condition: Expression.Expr,
     then: Stmt[],
-    else_: Stmt[]
+    else_: Stmt[] | undefined
   ): If => ({
     _tag: "stmt",
     type: "if",
@@ -131,6 +140,31 @@ export namespace While {
     _tag: "stmt",
     type: "while",
     cond,
+    body,
+  });
+}
+
+export interface For {
+  _tag: "stmt";
+  type: "for";
+  initializer: Expression.Assign | Expression.Variable | undefined;
+  cond: Expression.Expr | undefined;
+  update: Expression.Expr | undefined;
+  body: Stmt[];
+}
+
+export namespace For {
+  export const of = (
+    initializer: Expression.Assign | Expression.Variable | undefined,
+    cond: Expression.Expr | undefined,
+    update: Expression.Expr | undefined,
+    body: Stmt[]
+  ): For => ({
+    _tag: "stmt",
+    type: "for",
+    initializer,
+    cond,
+    update,
     body,
   });
 }
