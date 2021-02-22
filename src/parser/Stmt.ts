@@ -10,6 +10,7 @@ export type Stmt =
   | Return
   | Var
   | While
+  | Class
   | For;
 
 export interface Expr {
@@ -35,6 +36,28 @@ export namespace Block {
     _tag: "stmt",
     type: "block",
     stmts,
+  });
+}
+
+export interface Class {
+  _tag: "stmt";
+  type: "class";
+  name: T.Identifier;
+  super: T.Identifier | undefined;
+  functions: Function_[];
+}
+
+export namespace Class {
+  export const of = (
+    name: T.Identifier,
+    superName: T.Identifier | undefined,
+    functions: Function_[]
+  ): Class => ({
+    _tag: "stmt",
+    type: "class",
+    name,
+    super: superName,
+    functions,
   });
 }
 
@@ -97,18 +120,13 @@ export namespace Print {
 export interface Return {
   _tag: "stmt";
   type: "return";
-  keyword: T.Identifier;
-  value: Expression.Expr;
+  value: Expression.Expr | undefined;
 }
 
 export namespace Return {
-  export const of = (
-    keyword: T.Identifier,
-    value: Expression.Expr
-  ): Return => ({
+  export const of = (value: Expression.Expr | undefined): Return => ({
     _tag: "stmt",
     type: "return",
-    keyword,
     value,
   });
 }
