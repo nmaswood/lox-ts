@@ -1,3 +1,4 @@
+import { Identifier } from "./../scanner/Token";
 import * as E from "fp-ts/lib/Either";
 import * as O from "fp-ts/lib/Option";
 import { pipe } from "fp-ts/lib/pipeable";
@@ -7,6 +8,7 @@ import * as S from "./Stmt";
 import * as T from "../scanner/Token";
 import { Stream } from "../stream/Stream";
 import * as PE from "./ParseError";
+import { partitionMapWithIndex } from "fp-ts/lib/ReadonlyRecord";
 
 interface Context {
   stream: Stream<T.Token>;
@@ -57,8 +59,7 @@ class Handler {
             case "if":
               return Handler.forIfStatement(context);
             case "for":
-              throw new Error("cannot handle yet");
-            // return Handler.forForStatement(context);
+              return Handler.forForStatement(context);
             default:
               return E.left(PE.MISC_ERROR);
           }
@@ -67,70 +68,154 @@ class Handler {
     );
   }
 
+  /*
+    * expression     → assignment ;
+    * assignment     → ( call "." )? IDENTIFIER "=" assignment | logic_or ;
+    * logic_or       → logic_and ( "or" logic_and )* ;
+    * logic_and      → equality ( "and" equality )* ;
+    * equality       → comparison ( ( "!=" | "==" ) comparison )* ;
+    * comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+    * term           → factor ( ( "-" | "+" ) factor )* ;
+    * factor         → unary ( ( "/" | "*" ) unary )* ;
+    * unary          → ( "!" | "-" ) unary | call ;
+    * catl           → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
+    * primary        → "true" | "false" | "nil" | "this"
+                       | NUMBER | STRING | IDENTIFIER | "(" expression ")"
+                       | "super" "." IDENTIFIER ;
+   */
   static forExpression(context: Context): E.Either<PE.ParseError, S.Expr> {
-    const checkLiteral = (tokenElement: T.TokenElement) =>
+    return pipe(
+      this.forAssignment(context),
+      E.chain(assertSequence(context, "semicolon"))
+    );
+  }
+
+  static forAssignment(context: Context): E.Either<PE.ParseError, S.Expr> {
+    return undefined!;
+  }
+
+  /*
+   * call
+   * primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
+   */
+  static forCall(context: Context): E.Either<PE.ParseError, S.Expr> {
+    const recurse = (acc: Ex.Expr): E.Either<PE.ParseError, Ex.Expr> =>
       pipe(
-        tokenElement,
-        O.fromPredicate(T.Literal.is),
-        O.map((t) => this.forLiteral(context, t))
+        safePeek(context.stream),
+        E.chain(({ token }) => {
+          switch (token.type) {
+            case "left_paren":
+              return pipe(
+                this.forArguments(context),
+                E.map((args) =>
+                  Ex.Call.of(
+                    acc,
+                    undefined!, // what does this even do?
+                    args.map((a) => a.value)
+                  )
+                ),
+                E.chain((ex) => recurse(ex))
+              );
+            case "dot":
+              return pipe(
+                assertSequenceWithUndefined(context, "dot"),
+                E.chain(() => this.forIdentifier(context)),
+                E.map((identifier) => Ex.Get.of(acc, identifier)),
+                E.chain((ex) => recurse(ex))
+              );
+            default:
+              return E.right(acc);
+          }
+        })
       );
 
-    const checkUnary = (tokenElement: T.TokenElement) =>
+    return pipe(
+      this.forPrimary(context),
+      E.chain((primary) => recurse(primary.value)),
+      E.map((ex) => S.Expr.of(ex))
+    );
+  }
+  /*
+   * parameters
+   * IDENTIFIER ( "," IDENTIFIER )* ;
+   * ()
+   * (a)
+   * (a, b)
+   */
+  static forArguments(context: Context): E.Either<PE.ParseError, S.Expr[]> {
+    const gatherArguments = (
+      acc: S.Expr[]
+    ): E.Either<PE.ParseError, S.Expr[]> =>
       pipe(
-        tokenElement,
-        O.fromPredicate(T.UnaryOperator.is),
-        O.map((t) =>
-          pipe(
-            Handler.forExpression(context),
-            E.map(({ value }) => S.Expr.of(Ex.Unary.of(t, value)))
-          )
-        )
+        safePeek(context.stream),
+        E.map(({ token }) => token),
+        E.chain((te) => {
+          switch (te.type) {
+            case "right_paren":
+              return E.right(acc);
+            case "comma":
+              return pipe(
+                assertSequenceWithUndefined(context, "comma"),
+                E.chain(() => gatherArguments(acc))
+              );
+            default:
+              return pipe(
+                this.forExpression(context),
+                E.map((expr) => [...acc, expr])
+              );
+          }
+        })
       );
 
+    return pipe(
+      assertSequenceWithUndefined(context, "left_paren"),
+      E.chain(() => gatherArguments([]))
+    );
+  }
+
+  /*
+   *primary
+   * "true" | "false" | "nil" | "this"
+   * | NUMBER | STRING | IDENTIFIER | "(" expression ")"
+   * | "super" "." IDENTIFIER ;
+   */
+  static forPrimary(context: Context): E.Either<PE.ParseError, S.Expr> {
     return pipe(
       safeAdvance(context.stream),
-      E.chain((token) =>
-        pipe(
-          checkLiteral(token.token),
-          O.altW(() => checkUnary(token.token)),
-          O.getOrElseW(() => error<S.Expr>(token))
-        )
-      )
+      E.chain(
+        (t): E.Either<PE.ParseError, Ex.Expr> => {
+          const { token } = t;
+          switch (token.type) {
+            case "true":
+            case "false":
+            case "number":
+            case "string":
+            case "nil":
+              return E.right(Ex.Literal.of(token));
+            case "this":
+              return E.right(Ex.This.of(t));
+            case "identifier":
+              return E.right(Ex.Variable.of(t));
+            case "left_paren":
+              return pipe(
+                this.forExpression(context),
+                E.chain(assertSequence(context, "right_paren")),
+                E.map((expr) => Ex.Grouping.of(expr.value))
+              );
+            case "super":
+              return pipe(
+                this.forIdentifier(context),
+                E.map((method) => Ex.Super.of(t, method))
+              );
+            default:
+              return E.left(PE.MISC_ERROR);
+          }
+        }
+      ),
+      E.map((expr) => S.Expr.of(expr))
     );
   }
 
-  static forLiteral(
-    context: Context,
-    literal: T.Literal
-  ): E.Either<PE.ParseError, S.Expr> {
-    const checkBinary = (tokenElement: T.TokenElement) =>
-      pipe(
-        tokenElement,
-        O.fromPredicate(T.BinaryOperator.is),
-        O.map((t) =>
-          pipe(
-            safeAdvance(context.stream),
-            E.chain(() => Handler.forExpression(context)),
-            E.map(({ value }) =>
-              S.Expr.of(Ex.Binary.of(t, Ex.Literal.of(literal), value))
-            )
-          )
-        )
-      );
-
-    return pipe(
-      safePeek(context.stream),
-      E.chain((token) =>
-        pipe(
-          checkBinary(token.token),
-          O.fold(
-            () => E.right(S.Expr.of(Ex.Literal.of(literal))),
-            (binary) => binary
-          )
-        )
-      )
-    );
-  }
   /*
    * # TODO
    * varDecl
@@ -142,17 +227,28 @@ class Handler {
 
   static forVar(context: Context): E.Either<PE.ParseError, S.Var> {
     return pipe(
-      safeAdvance(context.stream),
-      E.chain((t) =>
-        t.token.type === "identifier"
-          ? E.right({ token: t, identifier: t.token })
-          : E.left(PE.UNEXPECTED_END)
-      ),
-      E.chain(assertSequence(context, "equal")),
-      E.chain(({ identifier }) =>
+      this.forIdentifier(context),
+      E.chain((identifier) =>
         pipe(
-          Handler.forExpression(context),
-          E.map(({ value }) => S.Var.of(identifier, value))
+          safePeek(context.stream),
+          E.chain((peeked) => {
+            switch (peeked.token.type) {
+              case "semicolon":
+                return pipe(
+                  assertSequenceWithUndefined(context, "semicolon"),
+                  E.map(() => S.Var.of(identifier, undefined))
+                );
+              case "equal":
+                return pipe(
+                  assertSequenceWithUndefined(context, "equal"),
+                  E.chain(() => Handler.forExpression(context)),
+                  E.chain(assertSequence(context, "semicolon")),
+                  E.map(({ value }) => S.Var.of(identifier, value))
+                );
+              default:
+                return E.left(PE.MISC_ERROR);
+            }
+          })
         )
       )
     );
@@ -195,7 +291,6 @@ class Handler {
    * (a)
    * (a, b)
    */
-
   static forParameters(
     context: Context
   ): E.Either<PE.ParseError, T.Identifier[]> {
@@ -417,19 +512,18 @@ class Handler {
   static forIfStatement(context: Context): E.Either<PE.ParseError, S.If> {
     const forElse = () =>
       pipe(
-        safePeekO(context.stream),
-        O.chain(O.fromPredicate((t) => t.token.type === "else")),
-        O.map(() =>
-          pipe(
-            assertSequenceWithUndefined(context, "else", "left_brace"),
-            E.chain(() => this.forBlock(context)),
-            E.chain(assertSequence(context, "right_brace"))
-          )
-        ),
-        O.fold(
-          () => E.right<PE.ParseError, S.Stmt[] | undefined>(undefined),
-          (y) => y
-        )
+        safePeek(context.stream),
+        E.chain((peeked) => {
+          switch (peeked.token.type) {
+            case "else":
+              return pipe(
+                assertSequenceWithUndefined(context, "else"),
+                E.chain(() => this.forBlock(context))
+              );
+            default:
+              return E.right(undefined);
+          }
+        })
       );
 
     return pipe(
@@ -444,11 +538,24 @@ class Handler {
               forElse(),
               E.map((else_) => S.If.of(cond.value, then, else_))
             )
-          ),
-          E.chain(assertSequence(context, "right_brace"))
+          )
         )
       )
     );
+  }
+  /*
+   * forStmt
+   *  "for" "(" ( varDecl | exprStmt | ";" )
+   *   expression? ";"
+   *   expression? ")" statement ;
+   *
+   *
+   * for (var a = 1; a < 10; a = a + 1) {
+   * print a;
+   *  }
+   */
+  static forForStatement(context: Context): E.Either<PE.ParseError, S.For> {
+    return undefined!;
   }
 }
 
@@ -504,8 +611,7 @@ function safePeek(s: Stream<T.Token>): E.Either<PE.UnexpectedEnd, T.Token> {
 }
 
 function safePeekO(s: Stream<T.Token>): O.Option<T.Token> {
-  const result = s.safePeek();
-  return result === undefined ? O.none : O.some(result);
+  return O.fromNullable(s.safePeek());
 }
 
 function safeAdvance(s: Stream<T.Token>): E.Either<PE.ParseError, T.Token> {

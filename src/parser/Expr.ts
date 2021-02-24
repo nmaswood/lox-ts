@@ -1,3 +1,4 @@
+import { Identifier } from './../scanner/Token';
 import * as T from "../scanner/Token";
 
 export type Expr =
@@ -67,10 +68,10 @@ export namespace Call {
 export interface Get {
   type: "get";
   object: Expr;
-  name: T.String_;
+  name: T.Identifier;
 }
 export namespace Get {
-  export const of = (object: Expr, name: T.String_): Get => ({
+  export const of = (object: Expr, name: T.Identifier): Get => ({
     type: "get",
     object,
     name,
@@ -92,6 +93,7 @@ export interface Literal {
   type: "literal";
   value: T.Literal;
 }
+
 export namespace Literal {
   export const of = (value: T.Literal): Literal => ({
     type: "literal",
@@ -136,10 +138,10 @@ export namespace Set {
 export interface Super {
   type: "super";
   keyword: T.Token;
-  method: T.Token;
+  method: T.Identifier;
 }
 export namespace Super {
-  export const of = (keyword: T.Token, method: T.Token): Super => ({
+  export const of = (keyword: T.Token, method: T.Identifier): Super => ({
     type: "super",
     keyword,
     method,

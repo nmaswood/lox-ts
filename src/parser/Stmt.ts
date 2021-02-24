@@ -134,11 +134,14 @@ export interface Var {
   _tag: "stmt";
   type: "var";
   name: T.Identifier;
-  value: Expression.Expr;
+  value: Expression.Expr | undefined;
 }
 
 export namespace Var {
-  export const of = (name: T.Identifier, value: Expression.Expr): Var => ({
+  export const of = (
+    name: T.Identifier,
+    value: Expression.Expr | undefined
+  ): Var => ({
     _tag: "stmt",
     type: "var",
     name,
