@@ -1,4 +1,3 @@
-import { Identifier } from './../scanner/Token';
 import * as T from "../scanner/Token";
 
 export type Expr =

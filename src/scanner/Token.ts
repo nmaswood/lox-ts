@@ -1,32 +1,42 @@
-export interface Token {
-  line: number;
-  token: TokenElement;
+import { MapDiscriminatedUnion } from "./../AdvancedTypes";
+
+export interface TokenWithContext<T extends Token> {
+  token: T;
+  context: LexicalContext;
 }
-export namespace Token {
-  export const of = (line: number, token: TokenElement): Token => ({
-    line,
+
+export namespace TokenWithContext {
+  export const of = <T extends Token>(
+    token: T,
+    context: LexicalContext
+  ): TokenWithContext<T> => ({
     token,
+    context,
   });
 }
 
-export type TokenElement = NonLiteral | Literal;
+export interface LexicalContext {
+  line: number;
+}
+
+export namespace LexicalContext {
+  export const of = (line: number): LexicalContext => ({
+    line,
+  });
+}
+
+export type TokenByType = MapDiscriminatedUnion<Token, "type">;
+
+export type Token = NonLiteral | Literal;
+
+export namespace Token {
+  export const is = <T extends Token["type"]>(
+    type: T,
+    value: Token
+  ): value is TokenByType[T] => type === value["type"];
+}
 
 export type Literal = Identifier | String_ | Number_ | True | False | Nil;
-export namespace Literal {
-  export function is(t: TokenElement): t is Literal {
-    switch (t.type) {
-      case "string":
-      case "number":
-      case "identifier":
-      case "true":
-      case "false":
-      case "nil":
-        return true;
-      default:
-        return false;
-    }
-  }
-}
 
 export type Keyword =
   | And
@@ -60,12 +70,6 @@ export type OneCharacter =
 
 export type Operator = BinaryOperator | UnaryOperator;
 
-export namespace Operator {
-  export function is(x: Literal | NonLiteral): x is Operator {
-    return UnaryOperator.is(x) || BinaryOperator.is(x);
-  }
-}
-
 export type BinaryOperator =
   | Minus
   | Plus
@@ -80,29 +84,6 @@ export type BinaryOperator =
   | Or
   | And
   | LessEqual;
-
-export namespace BinaryOperator {
-  export function is(x: TokenElement): x is BinaryOperator {
-    switch (x.type) {
-      case "minus":
-      case "plus":
-      case "slash":
-      case "star":
-      case "bang_equal":
-      case "equal":
-      case "equal_equal":
-      case "greater":
-      case "greater_equal":
-      case "less":
-      case "less_equal":
-      case "and":
-      case "or":
-        return true;
-      default:
-        return false;
-    }
-  }
-}
 
 export type UnaryOperator = Minus | Bang;
 export namespace UnaryOperator {
@@ -227,11 +208,6 @@ export const SEMICOLON = {
 } as const;
 
 export type Semicolon = typeof SEMICOLON;
-
-export namespace Semicolon {
-  export const is = (t: Literal | NonLiteral): t is Semicolon =>
-    t.type === "semicolon";
-}
 
 export const SLASH = {
   type: "slash",

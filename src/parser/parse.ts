@@ -1,4 +1,3 @@
-import { Identifier } from "./../scanner/Token";
 import * as E from "fp-ts/lib/Either";
 import * as O from "fp-ts/lib/Option";
 import { pipe } from "fp-ts/lib/pipeable";
@@ -8,7 +7,6 @@ import * as S from "./Stmt";
 import * as T from "../scanner/Token";
 import { Stream } from "../stream/Stream";
 import * as PE from "./ParseError";
-import { partitionMapWithIndex } from "fp-ts/lib/ReadonlyRecord";
 
 interface Context {
   stream: Stream<T.Token>;
@@ -78,7 +76,7 @@ class Handler {
     * term           → factor ( ( "-" | "+" ) factor )* ;
     * factor         → unary ( ( "/" | "*" ) unary )* ;
     * unary          → ( "!" | "-" ) unary | call ;
-    * catl           → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
+    * call           → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
     * primary        → "true" | "false" | "nil" | "this"
                        | NUMBER | STRING | IDENTIFIER | "(" expression ")"
                        | "super" "." IDENTIFIER ;
@@ -92,6 +90,208 @@ class Handler {
 
   static forAssignment(context: Context): E.Either<PE.ParseError, S.Expr> {
     return undefined!;
+  }
+
+  static forLogicalAnd(context: Context): E.Either<PE.ParseError, S.Expr> {
+    const recurse = (acc: S.Expr): E.Either<PE.ParseError, S.Expr> =>
+      pipe(
+        safePeek(context.stream),
+        E.chain((peeked) => {
+          switch (peeked.token.type) {
+            case "and": {
+              const operator = peeked.token;
+              return pipe(
+                safeAdvance(context.stream),
+                E.chain(() => this.forEquality(context)),
+                E.chain((factor) =>
+                  recurse(
+                    S.Expr.of(Ex.Binary.of(operator, acc.value, factor.value))
+                  )
+                )
+              );
+            }
+            default:
+              return E.right(acc);
+          }
+        })
+      );
+
+    return pipe(
+      this.forComparison(context),
+      E.map((factor) =>
+        pipe(
+          recurse(factor),
+          E.getOrElse(() => factor)
+        )
+      )
+    );
+  }
+
+  static forEquality(context: Context): E.Either<PE.ParseError, S.Expr> {
+    const recurse = (acc: S.Expr): E.Either<PE.ParseError, S.Expr> =>
+      pipe(
+        safePeek(context.stream),
+        E.chain((peeked) => {
+          switch (peeked.token.type) {
+            case "equal_equal":
+            case "bang_equal": {
+              const operator = peeked.token;
+              return pipe(
+                safeAdvance(context.stream),
+                E.chain(() => this.forComparison(context)),
+                E.chain((factor) =>
+                  recurse(
+                    S.Expr.of(Ex.Binary.of(operator, acc.value, factor.value))
+                  )
+                )
+              );
+            }
+            default:
+              return E.right(acc);
+          }
+        })
+      );
+
+    return pipe(
+      this.forComparison(context),
+      E.map((factor) =>
+        pipe(
+          recurse(factor),
+          E.getOrElse(() => factor)
+        )
+      )
+    );
+  }
+
+  static forComparison(context: Context): E.Either<PE.ParseError, S.Expr> {
+    const recurse = (acc: S.Expr): E.Either<PE.ParseError, S.Expr> =>
+      pipe(
+        safePeek(context.stream),
+        E.chain((peeked) => {
+          switch (peeked.token.type) {
+            case "less":
+            case "less_equal":
+            case "greater":
+            case "greater_equal": {
+              const operator = peeked.token;
+              return pipe(
+                safeAdvance(context.stream),
+                E.chain(() => this.forTerm(context)),
+                E.chain((factor) =>
+                  recurse(
+                    S.Expr.of(Ex.Binary.of(operator, acc.value, factor.value))
+                  )
+                )
+              );
+            }
+            default:
+              return E.right(acc);
+          }
+        })
+      );
+
+    return pipe(
+      this.forTerm(context),
+      E.map((factor) =>
+        pipe(
+          recurse(factor),
+          E.getOrElse(() => factor)
+        )
+      )
+    );
+  }
+
+  //* term           → factor ( ( "-" | "+" ) factor )* ;
+  static forTerm(context: Context): E.Either<PE.ParseError, S.Expr> {
+    const recurse = (acc: S.Expr): E.Either<PE.ParseError, S.Expr> =>
+      pipe(
+        safePeek(context.stream),
+        E.chain((peeked) => {
+          switch (peeked.token.type) {
+            case "minus":
+            case "plus": {
+              const operator = peeked.token;
+              return pipe(
+                safeAdvance(context.stream),
+                E.chain(() => this.forFactor(context)),
+                E.chain((factor) =>
+                  recurse(
+                    S.Expr.of(Ex.Binary.of(operator, acc.value, factor.value))
+                  )
+                )
+              );
+            }
+            default:
+              return E.right(acc);
+          }
+        })
+      );
+
+    return pipe(
+      this.forFactor(context),
+      E.map((factor) =>
+        pipe(
+          recurse(factor),
+          E.getOrElse(() => factor)
+        )
+      )
+    );
+  }
+
+  static forFactor(context: Context): E.Either<PE.ParseError, S.Expr> {
+    const recurse = (acc: Ex.Expr): E.Either<PE.ParseError, Ex.Expr> =>
+      pipe(
+        safePeek(context.stream),
+        E.chain((t) => {
+          switch (t.token.type) {
+            case "slash":
+            case "star": {
+              const operator = t.token;
+              return pipe(
+                safeAdvance(context.stream),
+                E.chain(() => this.forUnary(context)),
+                E.chain((unary) =>
+                  recurse(Ex.Binary.of(operator, acc, unary.value))
+                )
+              );
+            }
+            default:
+              return E.right(acc);
+          }
+        })
+      );
+
+    return pipe(
+      this.forUnary(context),
+      E.map((unary) =>
+        pipe(
+          recurse(unary.value),
+          E.map((ex) => S.Expr.of(ex)),
+          E.getOrElse(() => unary)
+        )
+      )
+    );
+  }
+
+  static forUnary(context: Context): E.Either<PE.ParseError, S.Expr> {
+    return pipe(
+      safeAdvance(context.stream),
+      E.chain((t) =>
+        pipe(
+          t.token.type === "bang" || t.token.type === "minus"
+            ? E.right(t.token)
+            : E.left(PE.wrongToken(t, "minus", "bang")),
+
+          E.chain((operator) =>
+            pipe(
+              this.forAssignment(context),
+              E.altW(() => this.forCall(context)),
+              E.map((expr) => S.Expr.of(Ex.Unary.of(operator, expr.value)))
+            )
+          )
+        )
+      )
+    );
   }
 
   /*
@@ -114,14 +314,14 @@ class Handler {
                     args.map((a) => a.value)
                   )
                 ),
-                E.chain((ex) => recurse(ex))
+                E.chain(recurse)
               );
             case "dot":
               return pipe(
                 assertSequenceWithUndefined(context, "dot"),
                 E.chain(() => this.forIdentifier(context)),
                 E.map((identifier) => Ex.Get.of(acc, identifier)),
-                E.chain((ex) => recurse(ex))
+                E.chain(recurse)
               );
             default:
               return E.right(acc);
