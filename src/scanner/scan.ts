@@ -4,17 +4,12 @@ import { Stream } from "./Stream";
 
 import { ONE_CHAR, TWO_CHAR, WHITE_SPACE, KEYWORDS } from "./ScannerConstants";
 import { IsChar } from "../util/IsChar";
-import { LexicalContext } from "./Token";
 
 interface ScanContext {
   stream: Stream<string>;
   line: number;
   tokensWithContext: T.TokenWithContext<T.Token>[];
   errors: ScanError[];
-}
-export interface ScanError {
-  message: string;
-  context: LexicalContext;
 }
 
 export function scan(
@@ -50,10 +45,12 @@ export function scan(
     } else if (IsChar.alpha(char)) {
       Handler.forReservedAndIdentifier(context);
     } else {
-      context.errors.push({
-        line: context.line,
-        message: `Unexpected char ${char}`,
-      });
+      context.errors.push(
+        ScanError.of(
+          `Unexpected char ${char}`,
+          T.LexicalContext.of(context.line)
+        )
+      );
     }
   }
 
@@ -72,43 +69,44 @@ class Handler {
     char: string
   ) {
     const nextChar = stream.peek();
-    const withLine = fromLine(line);
+    const withContext = (t: T.Token) =>
+      T.TokenWithContext.of(t, T.LexicalContext.of(line));
     switch (char) {
       case "!":
         if (nextChar === "=") {
-          tokensWithContext.push(withLine(T.BANG_EQUAL));
+          tokensWithContext.push(withContext(T.BANG_EQUAL));
           stream.advance();
         } else {
-          tokensWithContext.push(withLine(T.BANG));
+          tokensWithContext.push(withContext(T.BANG));
         }
         break;
       case "=":
         if (nextChar === "=") {
-          tokensWithContext.push(withLine(T.EQUAL_EQUAL));
+          tokensWithContext.push(withContext(T.EQUAL_EQUAL));
           stream.advance();
         } else {
-          tokensWithContext.push(withLine(T.EQUAL));
+          tokensWithContext.push(withContext(T.EQUAL));
         }
         break;
       case "<":
         if (nextChar === "=") {
-          tokensWithContext.push(withLine(T.LESS_EQUAL));
+          tokensWithContext.push(withContext(T.LESS_EQUAL));
           stream.advance();
         } else {
-          tokensWithContext.push(withLine(T.LESS));
+          tokensWithContext.push(withContext(T.LESS));
         }
         break;
       case ">":
         if (nextChar === "=") {
-          tokensWithContext.push(withLine(T.GREATER_EQUAL));
+          tokensWithContext.push(withContext(T.GREATER_EQUAL));
 
           stream.advance();
         } else {
-          tokensWithContext.push(withLine(T.GREATER));
+          tokensWithContext.push(withContext(T.GREATER));
         }
         break;
       default:
-        panic();
+        throw new Error("illegal state");
     }
   }
 
@@ -118,12 +116,14 @@ class Handler {
         stream.advance();
       }
     } else {
-      tokensWithContext.push(fromLine(line)(T.SLASH));
+      tokensWithContext.push(
+        T.TokenWithContext.of(T.SLASH, T.LexicalContext.of(line))
+      );
     }
   }
 
   static forString(context: ScanContext) {
-    const { stream, errors, tokensWithContext } = context;
+    const { stream, tokensWithContext } = context;
     const startIndex = stream.index;
     let seenEndQuote = false;
     while (stream.hasNext() && !seenEndQuote) {
@@ -138,18 +138,20 @@ class Handler {
     }
 
     if (!seenEndQuote) {
-      errors.push({
-        line: context.line,
-        message: "Unterminated string",
-      });
+      context.errors.push(
+        ScanError.of("Untermianted string", T.LexicalContext.of(context.line))
+      );
+
       return;
     }
 
     const value = stream.input.slice(startIndex, stream.index - 1);
-    tokensWithContext.push({
-      line: context.line,
-      token: T.String_.of(value),
-    });
+    tokensWithContext.push(
+      T.TokenWithContext.of(
+        T.String_.of(value),
+        T.LexicalContext.of(context.line)
+      )
+    );
   }
 
   static forNumber({ stream, line, errors, tokensWithContext }: ScanContext) {
@@ -176,15 +178,16 @@ class Handler {
     const asNumber = Number(number);
 
     if (Number.isNaN(asNumber)) {
-      errors.push({
-        line,
-        message: `Could not parse number from ${number}`,
-      });
+      errors.push(
+        ScanError.of(
+          `Could not parse number from ${number}`,
+          T.LexicalContext.of(line)
+        )
+      );
     } else {
-      tokensWithContext.push({
-        line,
-        token: T.Number_.of(asNumber),
-      });
+      tokensWithContext.push(
+        T.TokenWithContext.of(T.Number_.of(asNumber), T.LexicalContext.of(line))
+      );
     }
   }
 
@@ -200,16 +203,28 @@ class Handler {
     const word = stream.input.slice(startIndex, stream.index);
     const token = KEYWORDS.get(word);
     if (token === undefined) {
-      tokensWithContext.push(T.Token.of(line, T.Identifier.of(word)));
+      tokensWithContext.push(
+        T.TokenWithContext.of(T.Identifier.of(word), T.LexicalContext.of(line))
+      );
     } else {
-      tokensWithContext.push(T.Token.of(line, token));
+      tokensWithContext.push(
+        T.TokenWithContext.of(token, T.LexicalContext.of(line))
+      );
     }
   }
 }
 
-function fromLine(line: number) {
-  return (token: T.NonLiteral): T.Token => ({
-    line,
-    token,
+export interface ScanError {
+  message: string;
+  context: T.LexicalContext;
+}
+
+export namespace ScanError {
+  export const of = (
+    message: string,
+    context: T.LexicalContext
+  ): ScanError => ({
+    message,
+    context,
   });
 }
