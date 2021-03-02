@@ -1,26 +1,24 @@
-import { Token, TokenElement } from "./../scanner/Token";
+import * as T from "./../scanner/Token";
 
-export type ParseError = UnexpectedEnd | typeof MISC_ERROR | WrongType;
+export type ParseError<TokenT extends T.Token> =
+  | UnexpectedEnd
+  | WrongType<TokenT>;
 
-export interface WrongType {
+export interface WrongType<TokenT extends T.Token> {
   type: "wrong_token";
-  actual: Token;
-  expected: TokenElement["type"][];
+  actual: T.TokenWithContext<TokenT>;
+  expected: T.Token["type"][];
 }
-
-export const MISC_ERROR = {
-  type: "misc",
-} as const;
 
 export type UnexpectedEnd = typeof UNEXPECTED_END;
 export const UNEXPECTED_END = {
   type: "unexpected_end",
 } as const;
 
-export function wrongToken(
-  actual: Token,
-  ...expected: TokenElement["type"][]
-): WrongType {
+export function wrongToken<TokenT extends T.Token>(
+  actual: T.TokenWithContext<TokenT>,
+  ...expected: T.Token["type"][]
+): WrongType<TokenT> {
   return {
     type: "wrong_token",
     actual,

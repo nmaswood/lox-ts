@@ -1,2 +1,2 @@
 export { scan } from "./scanner/scan";
-export { parse } from "./parser/parse";
+// export { parse } from "./parser/parse";
