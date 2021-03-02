@@ -1,6 +1,6 @@
+import { Stream } from "./../stream/Stream";
 import * as E from "fp-ts/lib/Either";
 import * as T from "./Token";
-import { Stream } from "./Stream";
 
 import { ONE_CHAR, TWO_CHAR, WHITE_SPACE, KEYWORDS } from "./ScannerConstants";
 import { IsChar } from "../util/IsChar";
@@ -16,7 +16,7 @@ export function scan(
   input: string
 ): E.Either<ScanError[], T.TokenWithContext<T.Token>[]> {
   const context: ScanContext = {
-    stream: new Stream(input),
+    stream: new Stream(input.split("")),
     line: 0,
     tokensWithContext: [],
     errors: [],
@@ -148,7 +148,7 @@ class Handler {
     const value = stream.input.slice(startIndex, stream.index - 1);
     tokensWithContext.push(
       T.TokenWithContext.of(
-        T.String_.of(value),
+        T.String_.of(value.join("")),
         T.LexicalContext.of(context.line)
       )
     );
@@ -174,7 +174,7 @@ class Handler {
         }
       }
     }
-    const number = stream.input.slice(startIndex, stream.index);
+    const number = stream.input.slice(startIndex, stream.index).join("");
     const asNumber = Number(number);
 
     if (Number.isNaN(asNumber)) {
@@ -201,10 +201,13 @@ class Handler {
       stream.advance();
     }
     const word = stream.input.slice(startIndex, stream.index);
-    const token = KEYWORDS.get(word);
+    const token = KEYWORDS.get(word.join(""));
     if (token === undefined) {
       tokensWithContext.push(
-        T.TokenWithContext.of(T.Identifier.of(word), T.LexicalContext.of(line))
+        T.TokenWithContext.of(
+          T.Identifier.of(word.join("")),
+          T.LexicalContext.of(line)
+        )
       );
     } else {
       tokensWithContext.push(
