@@ -6,6 +6,12 @@ export class Stream<T> {
     this.input = input;
   }
 
+  clone(): Stream<T> {
+    const s = new Stream(this.input);
+    s.index = this.index;
+    return s;
+  }
+
   hasNext(): boolean {
     return this.index < this.input.length;
   }
