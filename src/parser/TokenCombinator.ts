@@ -1,3 +1,4 @@
+import { WithStream } from "./../stream/WithStream";
 import * as PE from "./ParseError";
 import * as Types from "./types";
 import * as Streams from "../stream/Streams";
@@ -8,19 +9,33 @@ import * as E from "fp-ts/lib/Either";
 
 export const is = <TokenType extends T.Token["type"]>(type: TokenType) => (
   s: Types.TokenStream
-): E.Either<PE.ParseError, T.TokenWithContext<T.TokenByType[TokenType]>> =>
+): E.Either<
+  PE.ParseError,
+  WithStream<
+    T.TokenWithContext<T.Token>,
+    T.TokenWithContext<T.TokenByType[TokenType]>
+  >
+> =>
   pipe(
     s,
     Streams.Either.safeAdvance(() => PE.UNEXPECTED_END),
-    E.chain((next) => {
-      if (next.value.token.type !== type) {
-        return E.left<
-          PE.ParseError,
+    E.chain(
+      (
+        next
+      ): E.Either<
+        PE.ParseError,
+        WithStream<
+          T.TokenWithContext<T.Token>,
           T.TokenWithContext<T.TokenByType[TokenType]>
-        >(PE.wrongToken(next.value, type));
-      }
-      return E.right(
-        next.value as T.TokenWithContext<T.TokenByType[TokenType]>
-      );
-    })
+        >
+      > =>
+        next.value.token.type !== type
+          ? E.left(PE.wrongToken(next.value, type))
+          : E.right(
+              WithStream.of(
+                next.stream,
+                next.value as T.TokenWithContext<T.TokenByType[TokenType]>
+              )
+            )
+    )
   );
