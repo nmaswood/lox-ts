@@ -134,7 +134,7 @@ const CASES: Case[] = [
 
 describe("parse", () => {
   CASES.forEach(({ input, expected, description }) => {
-    xit(`correctly handles ${description}`, () => {
+    it(`correctly handles ${description}`, () => {
       expect(parse(input)).toEqual(expected);
     });
   });
