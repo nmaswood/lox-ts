@@ -385,7 +385,7 @@ const CASES: {
     ]),
   },
 ];
-describe("scan", () => {
+describe.only("scan", () => {
   CASES.forEach(({ input, expected, description }) => {
     it(`correctly handles ${description}`, () => {
       expect(scan(input)).toEqual(expected);
