@@ -6,10 +6,8 @@ declaration → classDecl
 classDecl → "class" IDENTIFIER ( "<" IDENTIFIER )?
 "{" function\* "}" ;
 funDecl → "fun" function ;
-varDecl → "var" IDENTIFIER ( "=" expression )? ";" ;jj
-`
-jkvasdjklf
-ii
+varDecl → "var" IDENTIFIER ( "=" expression )? ";" 
+
 
 statement → exprStmt
 | forStmt

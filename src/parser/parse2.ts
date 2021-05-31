@@ -16,7 +16,7 @@ import * as TC from "./TokenCombinator";
 export function parse(
   tokensWithContext: T.TokenWithContext<T.Token>[]
 ): E.Either<PE.ParseError[], S.Stmt[]> {
-  function f(
+  function recurse(
     stmts: S.Stmt[],
     errors: PE.ParseError[],
     stream: Types.TokenStream
@@ -26,15 +26,15 @@ export function parse(
     }
 
     return pipe(
-      forDeclaration(stream),
+      forDeclaration()(stream),
       E.fold(
-        (left) => f(stmts, [...errors, left], synchronize(stream)),
-        (right) => f([...stmts, right.value], errors, right.stream)
+        (left) => recurse(stmts, [...errors, left], synchronize(stream)),
+        (right) => recurse([...stmts, right.value], errors, right.stream)
       )
     );
   }
 
-  return f([], [], new Stream(tokensWithContext));
+  return recurse([], [], new Stream(tokensWithContext));
 }
 
 type ParserResult<ValueT> = E.Either<
@@ -44,47 +44,6 @@ type ParserResult<ValueT> = E.Either<
 
 const forDeclaration = () => (s: Types.TokenStream): ParserResult<S.Stmt> =>
   C.Combinator.oneOf(() => PE.UNEXPECTED_END, Hoist.DECLARATION_COMBINATORS)(s);
-
-// function forDeclaration(
-//   stream: Types.TokenStream<T.Token>
-// ): ParserResult<S.Stmt> {
-//   return pipe(
-//     Streams.safeAdvance(stream),
-//     E.chain(
-//       (right): ParserResult<S.Stmt> => {
-//         switch (right.value.token.type) {
-//           case "var":
-//             return forVar(right.stream);
-//           case "print":
-//             return forPrint(right.stream);
-//           case "fun":
-//             return forFun(right.stream);
-//           case "class":
-//             return forClass(right.stream);
-//           case "while":
-//             return forWhile(right.stream);
-//           case "if":
-//             return forIf(right.stream);
-//           case "for":
-//             return forFor(right.stream);
-//           default:
-//             return E.left(
-//               PE.wrongToken(
-//                 right.value,
-//                 "var",
-//                 "print",
-//                 "fun",
-//                 "class",
-//                 "while",
-//                 "if",
-//                 "for"
-//               )
-//             );
-//         }
-//       }
-//     )
-//   );
-// }
 
 // varDecl → "var" IDENTIFIER ( "=" expression )? ";" ;
 const forVar = () => (s: Types.TokenStream): ParserResult<S.Var> =>
@@ -175,33 +134,23 @@ namespace Hoist {
   >[] = [forVar(), forPrint(), forFunction()];
 }
 
-function forFun(
-  stream: Types.TokenStream<T.Token>
-): E.Either<PE.ParseError, Types.WithStream<S.Function_>> {
+/*
+classDecl → "class" IDENTIFIER ( "<" IDENTIFIER )?
+"{" function\* "}" ;
+*/
+function forClass(stream: Types.TokenStream): ParserResult<S.Class> {
   return undefined!;
 }
 
-function forClass(
-  stream: Types.TokenStream<T.Token>
-): E.Either<PE.ParseError, Types.WithStream<S.Class>> {
+function forWhile(stream: Types.TokenStream): ParserResult<S.While> {
   return undefined!;
 }
 
-function forWhile(
-  stream: Types.TokenStream<T.Token>
-): E.Either<PE.ParseError, Types.WithStream<S.While>> {
+function forIf(stream: Types.TokenStream): ParserResult<S.If> {
   return undefined!;
 }
 
-function forIf(
-  stream: Types.TokenStream<T.Token>
-): E.Either<PE.ParseError, Types.WithStream<S.If>> {
-  return undefined!;
-}
-
-function forFor(
-  stream: Types.TokenStream<T.Token>
-): E.Either<PE.ParseError, Types.WithStream<S.For>> {
+function forFor(stream: Types.TokenStream): ParserResult<S.For> {
   return undefined!;
 }
 
