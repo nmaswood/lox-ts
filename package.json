@@ -15,7 +15,7 @@
     "wp:watch": "webpack --watch",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:debug": "node --inspect-brk node_modules/.bin/jest"
+    "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand"
   },
   "dependencies": {
     "fp-ts": "^2.10.5",

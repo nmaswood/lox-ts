@@ -1,7 +1,7 @@
 import { WithStream } from "./../stream/WithStream";
 import * as Types from "./types";
 import * as E from "fp-ts/lib/Either";
-import { pipe } from "fp-ts/function";
+import { pipe } from "fp-ts/lib/pipeable";
 import * as Ex from "./Expr";
 import * as S from "./Stmt";
 import * as T from "../scanner/Token";
@@ -51,11 +51,13 @@ const forDeclaration =
 // varDecl → "var" IDENTIFIER ( "=" expression )? ";" ;
 const forVar =
   () =>
-  (s: Types.TokenStream): ParserResult<S.Var> =>
-    pipe(
+  (s: Types.TokenStream): ParserResult<S.Var> => {
+    debugger;
+    return pipe(
       s,
       C.Combinator.and2(TC.is("var"), TC.is("identifier")),
       E.chain((identifier) => {
+        debugger;
         const expr = pipe(
           identifier.stream,
           TC.is("equal"),
@@ -73,7 +75,7 @@ const forVar =
         );
       })
     );
-
+  };
 // printStmt → "print" expression ";" ;
 const forPrint =
   () =>
