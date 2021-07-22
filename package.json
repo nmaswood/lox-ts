@@ -8,6 +8,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
+    "build": "tsc",
     "tsc": "tsc",
     "tsc:watch": "tsc --watch",
     "lint": "eslint src",
