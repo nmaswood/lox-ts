@@ -275,9 +275,54 @@ const forBlock =
       })
     );
 
-const forExpression =
+export const forExpression =
   () =>
   (stream: Types.TokenStream): ParserResult<Ex.Expr> =>
+    undefined!;
+
+export const forAssignment =
+  () =>
+  (stream: Types.TokenStream): ParserResult<Ex.Assign> =>
+    undefined!;
+
+export const forLogicalOr =
+  () =>
+  (stream: Types.TokenStream): ParserResult<Ex.Binary> =>
+    undefined!;
+
+export const forLogicalAnd =
+  () =>
+  (stream: Types.TokenStream): ParserResult<Ex.Binary> =>
+    undefined!;
+
+export const forEquality =
+  () =>
+  (stream: Types.TokenStream): ParserResult<Ex.Binary> =>
+    undefined!;
+
+export const forComparison =
+  () =>
+  (stream: Types.TokenStream): ParserResult<Ex.Binary> =>
+    undefined!;
+
+export const forTerm =
+  () =>
+  (stream: Types.TokenStream): ParserResult<Ex.Binary> =>
+    undefined!;
+
+export const forFactor =
+  () =>
+  (stream: Types.TokenStream): ParserResult<Ex.Binary> =>
+    undefined!;
+
+export const forUnary =
+  () =>
+  (stream: Types.TokenStream): ParserResult<Ex.Unary> =>
+    undefined!;
+
+export const forCall =
+  () =>
+  (stream: Types.TokenStream): ParserResult<Ex.Call> =>
     undefined!;
 
 /*
