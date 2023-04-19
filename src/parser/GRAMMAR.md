@@ -6,8 +6,7 @@ declaration → classDecl
 classDecl → "class" IDENTIFIER ( "<" IDENTIFIER )?
 "{" function\* "}" ;
 funDecl → "fun" function ;
-varDecl → "var" IDENTIFIER ( "=" expression )? ";" 
-
+varDecl → "var" IDENTIFIER ( "=" expression )? ";"
 
 statement → exprStmt
 | forStmt
@@ -37,13 +36,13 @@ logic*or → logic_and ( "or" logic_and )* ;
 logic*and → equality ( "and" equality )* ;
 equality → comparison ( ( "!=" | "==" ) comparison )_ ;
 comparison → term ( ( ">" | ">=" | "<" | "<=" ) term )_ ;
-term → factor ( ( "-" | "+" ) factor )_ ;
-factor → unary ( ( "/" | "_" ) unary )\* ;
+term → factor ( ( "-" | "+" ) factor )\_ ;
+factor → unary ( ( "/" | "\*" ) unary )\* ;
 
 unary → ( "!" | "-" ) unary | call ;
 call → primary ( "(" arguments? ")" | "." IDENTIFIER )\* ;
 primary → "true" | "false" | "nil" | "this"
-| NUMBER | STRING | IDENTIFIER | "(" expression ")"
+| NUMBER | STRING | IDENTIFIEj | "(" expression ")"
 | "super" "." IDENTIFIER ;
 
 function → IDENTIFIER "(" parameters? ")" block ;
