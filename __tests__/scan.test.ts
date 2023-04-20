@@ -9,6 +9,7 @@ const CASES: {
   {
     description: "empty input",
     input: "",
+
     expected: E.right([T.TokenWithContext.of(T.EOF, T.LexicalContext.of(0))]),
   },
   {

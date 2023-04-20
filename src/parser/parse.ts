@@ -24,10 +24,12 @@ export function parse(
     }
 
     return pipe(
-      forDeclaration()(stream),
+      stream,
+      forEquality,
       E.fold(
         (left) => recurse(stmts, [...errors, left], synchronize(stream)),
-        (right) => recurse([...stmts, right.value], errors, right.stream)
+        (right) =>
+          recurse([...stmts, S.Expr.of(right.value)], errors, right.stream)
       )
     );
   }
@@ -35,295 +37,191 @@ export function parse(
   return recurse([], [], new Stream(tokensWithContext));
 }
 
-type ParserResult<ValueT> = E.Either<
-  PE.ParseError,
-  WithStream<T.TokenWithContext<T.Token>, ValueT>
->;
+const forExpression: C.Combinator<
+  T.TokenWithContext<T.Token>,
+  Ex.Expr,
+  PE.ParseError
+> = (stream: Types.TokenStream) => undefined!;
 
-const forDeclaration =
-  () =>
-  (s: Types.TokenStream): ParserResult<S.Stmt> =>
-    C.Combinator.oneOf(
-      () => PE.UNEXPECTED_END,
-      Hoist.DECLARATION_COMBINATORS
-    )(s);
-
-// varDecl → "var" IDENTIFIER ( "=" expression )? ";" ;
-const forVar =
-  () =>
-  (s: Types.TokenStream): ParserResult<S.Var> =>
-    pipe(
-      s,
-      C.Combinator.and2(TC.is("var"), TC.is("identifier")),
-      E.chain((identifier) => {
-        const expr = pipe(
-          identifier.stream,
-          TC.is("equal"),
-          E.chain(({ stream }) => forExpression()(stream)),
-          E.getOrElseW(() => WithStream.of(identifier.stream, undefined)),
-
-          ({ value, stream }) =>
-            WithStream.of(stream, S.Var.of(identifier.value[1].token, value))
-        );
-
-        return pipe(
-          expr.stream,
-          TC.is("semicolon"),
-          E.map(({ stream }) => WithStream.of(stream, expr.value))
-        );
-      })
-    );
-// printStmt → "print" expression ";" ;
-const forPrint =
-  () =>
-  (s: Types.TokenStream): ParserResult<S.Print> =>
-    pipe(
-      TC.is("print")(s),
-      E.chain((print) =>
-        pipe(
-          forExpression()(print.stream),
-          E.chain((expr) =>
-            pipe(
-              TC.is("semicolon")(expr.stream),
-              E.map(({ stream }) =>
-                WithStream.of(stream, S.Print.of(expr.value))
+const forEquality: C.Combinator<
+  T.TokenWithContext<T.Token>,
+  Ex.Expr,
+  PE.ParseError
+> = (stream: Types.TokenStream) =>
+  pipe(
+    stream,
+    forComparison,
+    E.map((term) =>
+      pipe(
+        term.stream,
+        C.Combinators.or2(TC.is("bang_equal"), TC.is("equal_equal")),
+        E.chain((withOperator) =>
+          pipe(
+            forComparison(withOperator.stream),
+            E.map((withComparison) =>
+              WithStream.of(
+                withOperator.stream,
+                Ex.Binary.of(
+                  withOperator.value.token,
+                  term.value,
+                  withComparison.value
+                )
               )
             )
           )
-        )
+        ),
+        E.getOrElse(() => term)
       )
-    );
+    )
+  );
 
-//   /*
-//    * function
-//    *
-//    * IDENTIFIER "(" parameters? ")" block ;
-//    *  fun addPair(a, b) {
-//    *    return a + b;
-//    *   }
-//    *
-//    */
-const forFunction =
-  () =>
-  (s: Types.TokenStream): ParserResult<S.Function_> =>
+const forComparison: C.Combinator<
+  T.TokenWithContext<T.Token>,
+  Ex.Expr,
+  PE.ParseError
+> = (stream: Types.TokenStream) =>
+  pipe(
+    stream,
+    forTerm,
+    E.map((term) =>
+      pipe(
+        term.stream,
+        C.Combinators.or4(
+          TC.is("less"),
+          TC.is("less_equal"),
+          TC.is("greater"),
+          TC.is("greater_equal")
+        ),
+        E.chain((withOperator) =>
+          pipe(
+            forTerm(withOperator.stream),
+            E.map((withTerm) =>
+              WithStream.of(
+                withOperator.stream,
+                Ex.Binary.of(
+                  withOperator.value.token,
+                  term.value,
+                  withTerm.value
+                )
+              )
+            )
+          )
+        ),
+        E.getOrElse(() => term)
+      )
+    )
+  );
+
+const forTerm: C.Combinator<
+  T.TokenWithContext<T.Token>,
+  Ex.Expr,
+  PE.ParseError
+> = (stream: Types.TokenStream) => {
+  return pipe(
+    stream,
+    forUnary,
+    E.map((factor) =>
+      pipe(
+        factor.stream,
+        C.Combinators.or2(TC.is("plus"), TC.is("minus")),
+        E.chain((withOperator) =>
+          pipe(
+            forFactor(withOperator.stream),
+            E.map((withFactor) =>
+              WithStream.of(
+                withOperator.stream,
+                Ex.Binary.of(
+                  withOperator.value.token,
+                  factor.value,
+                  withFactor.value
+                )
+              )
+            )
+          )
+        ),
+        E.getOrElse(() => factor)
+      )
+    )
+  );
+};
+
+const forFactor: C.Combinator<
+  T.TokenWithContext<T.Token>,
+  Ex.Expr,
+  PE.ParseError
+> = (stream: Types.TokenStream) => {
+  const recurse = (
+    withStream: WithStream<T.TokenWithContext<T.Token>, Ex.Expr>
+  ): C.CombinatorResult<T.TokenWithContext<T.Token>, Ex.Expr, PE.ParseError> =>
     pipe(
-      s,
-      C.Combinator.and3(TC.is("fun"), TC.is("identifier"), TC.is("left_paren")),
-      E.chain((withIdentifier) =>
+      withStream.stream,
+      C.Combinators.or2(TC.is("star"), TC.is("slash")),
+      E.map((withOperator) =>
         pipe(
-          forParameters()(withIdentifier.stream),
-          E.chain((withParameters) =>
-            pipe(
-              forBlock()(withParameters.stream),
-              E.chain((withBlock) =>
-                pipe(
-                  TC.is("semicolon")(withBlock.stream),
-                  E.map(({ stream }) =>
-                    WithStream.of(
-                      stream,
-                      S.Function_.of(
-                        withIdentifier.value[1].token,
-                        withParameters.value,
-                        withBlock.value
-                      )
-                    )
-                  )
+          forUnary(withOperator.stream),
+          E.chain((withUnary) =>
+            recurse(
+              WithStream.of(
+                withOperator.stream,
+                Ex.Binary.of(
+                  withOperator.value.token,
+                  withStream.value,
+                  withUnary.value
                 )
               )
             )
           )
         )
+      ),
+      E.getOrElse(() => E.right(withStream))
+    );
+
+  return pipe(
+    stream,
+    forUnary,
+    E.map((unary) =>
+      pipe(
+        recurse(unary),
+        E.getOrElse(() => unary)
+      )
+    )
+  );
+};
+
+const forUnary: C.Combinator<
+  T.TokenWithContext<T.Token>,
+  Ex.Expr,
+  PE.ParseError
+> = (stream: Types.TokenStream) => {
+  const parseUnary = (stream: Types.TokenStream) =>
+    pipe(
+      stream,
+      C.Combinators.and2(
+        C.Combinators.or2(TC.is("bang"), TC.is("minus")),
+        forUnary
+      ),
+      E.map((value) =>
+        WithStream.of(
+          value.stream,
+          Ex.Unary.of(value.value[0].token, value.value[1])
+        )
       )
     );
 
-namespace Hoist {
-  export const DECLARATION_COMBINATORS: C.Combinator<
-    T.TokenWithContext<T.Token>,
-    S.Stmt,
-    PE.ParseError
-  >[] = [forVar(), forPrint(), forFunction()];
-}
+  return pipe(stream, C.Combinators.or2(parseUnary, forCall));
+};
 
-/*
-classDecl → "class" IDENTIFIER ( "<" IDENTIFIER )?
-"{" function\* "}" ;
-*/
-function forClass(stream: Types.TokenStream): ParserResult<S.Class> {
-  return undefined!;
-}
-
-function forWhile(stream: Types.TokenStream): ParserResult<S.While> {
-  return undefined!;
-}
-
-function forIf(stream: Types.TokenStream): ParserResult<S.If> {
-  return undefined!;
-}
-
-function forFor(stream: Types.TokenStream): ParserResult<S.For> {
-  return undefined!;
-}
-
-//parameters → IDENTIFIER ( "," IDENTIFIER )_ ;
-const forParameters =
-  () =>
-  (s: Types.TokenStream): ParserResult<T.Identifier[]> => {
-    const recurse = (
-      acc: WithStream<T.TokenWithContext<T.Token>, T.Identifier[]>,
-      lastSeen: "identifier" | "comma" | "left_paren"
-    ): ParserResult<T.Identifier[]> =>
-      pipe(
-        acc.stream,
-        Streams.Either.safeAdvance(() => PE.UNEXPECTED_END),
-
-        E.chain((next) => {
-          const token = next.value.token;
-          switch (token.type) {
-            case "identifier": {
-              return lastSeen === "identifier"
-                ? E.left(PE.wrongToken(next.value, "comma"))
-                : recurse(
-                    WithStream.of(next.stream, [...acc.value, token]),
-                    token.type
-                  );
-            }
-            case "comma":
-              return lastSeen !== "identifier"
-                ? E.left(PE.wrongToken(next.value, token.type))
-                : recurse(WithStream.of(next.stream, acc.value), token.type);
-            case "right_paren":
-              return E.right(WithStream.of(next.stream, acc.value));
-            default:
-              return E.left(
-                PE.wrongToken(next.value, "identifier", "comma", "right_paren")
-              );
-          }
-        })
-      );
-    return recurse(WithStream.of(s, []), "left_paren");
-  };
-
-// arguments → expression ( "," expression )_ ;
-const forArguments =
-  () =>
-  (s: Types.TokenStream): ParserResult<Ex.Expr[]> => {
-    const recurse = (
-      acc: WithStream<T.TokenWithContext<T.Token>, Ex.Expr[]>,
-      lastSeen: "expression" | "comma" | "left_paren"
-    ): ParserResult<Ex.Expr[]> =>
-      pipe(
-        acc.stream,
-        Streams.Either.safePeek(() => PE.UNEXPECTED_END),
-        E.chain((next) => {
-          const token = next.value.token;
-          switch (token.type) {
-            case "comma":
-              return lastSeen !== "expression"
-                ? E.left(PE.wrongToken(next.value))
-                : pipe(
-                    next.stream,
-                    Streams.Either.safeAdvance(() => PE.UNEXPECTED_END),
-                    E.chain(({ stream }) =>
-                      recurse(WithStream.of(stream, acc.value), "comma")
-                    )
-                  );
-
-            case "right_brace":
-              return lastSeen !== "expression"
-                ? E.left(PE.wrongToken(next.value))
-                : pipe(
-                    next.stream,
-                    Streams.Either.safeAdvance(() => PE.UNEXPECTED_END),
-                    E.map(({ stream }) => WithStream.of(stream, acc.value))
-                  );
-
-            default:
-              return pipe(
-                next.stream,
-                forExpression(),
-                E.chain((expr) =>
-                  recurse(
-                    WithStream.of(expr.stream, [...acc.value, expr.value]),
-                    "expression"
-                  )
-                )
-              );
-          }
-        })
-      );
-    return recurse(WithStream.of(s, []), "left_paren");
-  };
-
-// block → "{" declaration\* "}" ;
-const forBlock =
-  () =>
-  (s: Types.TokenStream): ParserResult<S.Stmt[]> =>
-    pipe(
-      TC.is("left_brace")(s),
-      E.chain(({ stream }) => {
-        const parameters = C.Combinator.zeroOrMore(
-          [] as S.Stmt[],
-          (val, acc) => [...acc, val],
-          forDeclaration()
-        )(stream);
-
-        return pipe(
-          parameters.stream,
-          TC.is("right_brace"),
-          E.map(({ stream }) => WithStream.of(stream, parameters.value))
-        );
-      })
-    );
-
-export const forExpression =
-  () =>
-  (stream: Types.TokenStream): ParserResult<Ex.Expr> =>
-    undefined!;
-
-export const forAssignment =
-  () =>
-  (stream: Types.TokenStream): ParserResult<Ex.Assign> =>
-    undefined!;
-
-export const forLogicalOr =
-  () =>
-  (stream: Types.TokenStream): ParserResult<Ex.Binary> =>
-    undefined!;
-
-export const forLogicalAnd =
-  () =>
-  (stream: Types.TokenStream): ParserResult<Ex.Binary> =>
-    undefined!;
-
-export const forEquality =
-  () =>
-  (stream: Types.TokenStream): ParserResult<Ex.Binary> =>
-    undefined!;
-
-export const forComparison =
-  () =>
-  (stream: Types.TokenStream): ParserResult<Ex.Binary> =>
-    undefined!;
-
-export const forTerm =
-  () =>
-  (stream: Types.TokenStream): ParserResult<Ex.Binary> =>
-    undefined!;
-
-export const forFactor =
-  () =>
-  (stream: Types.TokenStream): ParserResult<Ex.Binary> =>
-    undefined!;
-
-export const forUnary =
-  () =>
-  (stream: Types.TokenStream): ParserResult<Ex.Unary> =>
-    undefined!;
-
-export const forCall =
-  () =>
-  (stream: Types.TokenStream): ParserResult<Ex.Call> =>
-    undefined!;
+const forCall: C.Combinator<
+  T.TokenWithContext<T.Token>,
+  Ex.Expr,
+  PE.ParseError
+> = (stream: Types.TokenStream) => {
+  return pipe(
+    stream,
+    // todo ARGUMENTS later
+    forPrimary
+  );
+};
 
 /*
  *primary
@@ -331,67 +229,52 @@ export const forCall =
  * | NUMBER | STRING | IDENTIFIER | "(" expression ")"
  * | "super" "." IDENTIFIER ;
  */
-const forPrimary =
-  () =>
-  (stream: Types.TokenStream): ParserResult<Ex.Expr> =>
-    pipe(
-      stream,
-      Streams.Either.safeAdvance(() => PE.UNEXPECTED_END),
-      E.chain((next) => {
-        const token = next.value.token;
-        switch (token.type) {
-          case "true":
-          case "false":
-          case "nil":
-          case "number":
-          case "string":
-            return E.right(WithStream.of(next.stream, Ex.Literal.of(token)));
-          case "left_paren":
-            return pipe(
-              next.stream,
-              C.Combinator.and2(forExpression(), TC.is("semicolon")),
 
-              E.map((f) => WithStream.of(f.stream, f.value[0]))
-            );
-          case "super":
-            return pipe(
-              next.stream,
+const forPrimary = (stream: Types.TokenStream) =>
+  pipe(
+    stream,
+    Streams.Either.safeAdvance(() => PE.UNEXPECTED_END),
+    E.chain((next) => {
+      const token = next.value.token;
 
-              C.Combinator.and3(
-                TC.is("dot"),
-                TC.is("identifier"),
-                TC.is("semicolon")
-              ),
+      switch (token.type) {
+        case "true":
+        case "false":
+        case "nil":
+        case "number":
+        case "string":
+          return E.right(WithStream.of(next.stream, Ex.Literal.of(token)));
+        case "left_paren":
+          return pipe(
+            next.stream,
+            C.Combinators.and2(forExpression, TC.is("right_paren")),
 
-              E.map(({ stream, value }) =>
-                WithStream.of(stream, Ex.Super.of(undefined!, value[1].token))
-              )
-            );
+            E.map((f) => WithStream.of(f.stream, f.value[0]))
+          );
+        case "super":
+          return pipe(
+            next.stream,
 
-          case "this":
-          default:
-            return E.left(PE.wrongToken(next.value));
-        }
-      })
-    );
+            C.Combinators.and3(
+              TC.is("dot"),
+              TC.is("identifier"),
+              TC.is("semicolon")
+            ),
 
-/*
-    * expression     → assignment ;
-    * assignment     → ( call "." )? IDENTIFIER "=" assignment | logic_or ;
-    * logic_or       → logic_and ( "or" logic_and )* ;
-    * logic_and      → equality ( "and" equality )* ;
-    * equality       → comparison ( ( "!=" | "==" ) comparison )* ;
-    * comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-    * term           → factor ( ( "-" | "+" ) factor )* ;
-    * factor         → unary ( ( "/" | "*" ) unary )* ;
-    * unary          → ( "!" | "-" ) unary | call ;
-    * call           → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
-    * primary        → "true" | "false" | "nil" | "this"
-                       | NUMBER | STRING | IDENTIFIER | "(" expression ")"
-                       | "super" "." IDENTIFIER ;
-   */
+            E.map(({ stream, value }) =>
+              WithStream.of(stream, Ex.Super.of(value[1].token))
+            )
+          );
 
-function synchronize(stream: Types.TokenStream): Types.TokenStream {
+        case "this":
+          return E.right(WithStream.of(next.stream, Ex.This.of(token)));
+        default:
+          return E.left(PE.wrongToken(next.value));
+      }
+    })
+  );
+
+export function synchronize(stream: Types.TokenStream): Types.TokenStream {
   const copy = stream.clone();
   while (!isStreamExhausted(copy)) {
     const next = copy.advance();
@@ -407,6 +290,8 @@ function synchronize(stream: Types.TokenStream): Types.TokenStream {
   return copy;
 }
 
-function isStreamExhausted(s: Stream<T.TokenWithContext<T.Token>>): boolean {
+export function isStreamExhausted(
+  s: Stream<T.TokenWithContext<T.Token>>
+): boolean {
   return T.Eof.is(s.peek().token);
 }

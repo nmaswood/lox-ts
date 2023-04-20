@@ -40,6 +40,8 @@ term → factor ( ( "-" | "+" ) factor )\_ ;
 factor → unary ( ( "/" | "\*" ) unary )\* ;
 
 unary → ( "!" | "-" ) unary | call ;
+
+// going to skip supporting identifier
 call → primary ( "(" arguments? ")" | "." IDENTIFIER )\* ;
 primary → "true" | "false" | "nil" | "this"
 | NUMBER | STRING | IDENTIFIEj | "(" expression ")"

@@ -14,6 +14,7 @@ interface Case {
 const CASES: Case[] = [
   {
     description: "empty input",
+
     input: [T.TokenWithContext.of(T.EOF, T.LexicalContext.of(0))],
     expected: E.right([]),
   },

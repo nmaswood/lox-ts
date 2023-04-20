@@ -3,12 +3,17 @@ import { Stream } from "../stream/Stream";
 import * as E from "fp-ts/lib/Either";
 import { pipe } from "fp-ts/function";
 
+export type CombinatorResult<InputT, ValueT, ErrorT> = E.Either<
+  ErrorT,
+  WithStream<InputT, ValueT>
+>;
+
 export type Combinator<InputT, ValueT, ErrorT> = (
   s: Stream<InputT>
-) => E.Either<ErrorT, WithStream<InputT, ValueT>>;
+) => CombinatorResult<InputT, ValueT, ErrorT>;
 
-export namespace Combinator {
-  export const or2 =
+export class Combinators {
+  static or2 =
     <InputT, ValueS, ValueT, ErrorT>(
       fA: Combinator<InputT, ValueS, ErrorT>,
       fB: Combinator<InputT, ValueT, ErrorT>
@@ -21,7 +26,7 @@ export namespace Combinator {
         E.altW(() => fB(s))
       );
 
-  export const or3 =
+  static or3 =
     <InputT, ValueS, ValueT, ValueU, ErrorT>(
       fA: Combinator<InputT, ValueS, ErrorT>,
       fB: Combinator<InputT, ValueT, ErrorT>,
@@ -36,7 +41,24 @@ export namespace Combinator {
         E.altW(() => fC(s))
       );
 
-  export const oneOf =
+  static or4 =
+    <InputT, ValueS, ValueT, ValueU, ValueV, ErrorT>(
+      fA: Combinator<InputT, ValueS, ErrorT>,
+      fB: Combinator<InputT, ValueT, ErrorT>,
+      fC: Combinator<InputT, ValueU, ErrorT>,
+      fD: Combinator<InputT, ValueV, ErrorT>
+    ) =>
+    (
+      s: Stream<InputT>
+    ): E.Either<ErrorT, WithStream<InputT, ValueS | ValueT | ValueU>> =>
+      pipe(
+        fA(s),
+        E.altW(() => fB(s)),
+        E.altW(() => fC(s)),
+        E.altW(() => fD(s))
+      );
+
+  static oneOf =
     <InputT, ValueS, ErrorT>(
       onError: (s: Stream<InputT>) => ErrorT,
       fs: Combinator<InputT, ValueS, ErrorT>[]
@@ -51,7 +73,7 @@ export namespace Combinator {
       return E.left(onError(s));
     };
 
-  export const and2 =
+  static and2 =
     <InputT, ValueS, ValueT, ErrorT>(
       fA: Combinator<InputT, ValueS, ErrorT>,
       fB: Combinator<InputT, ValueT, ErrorT>
@@ -72,7 +94,7 @@ export namespace Combinator {
         )
       );
 
-  export const and3 =
+  static and3 =
     <InputT, ValueS, ValueT, ValueU, ErrorT>(
       fA: Combinator<InputT, ValueS, ErrorT>,
       fB: Combinator<InputT, ValueT, ErrorT>,
@@ -102,7 +124,7 @@ export namespace Combinator {
         )
       );
 
-  export const zeroOrMore =
+  static zeroOrMore =
     <InputT, ValueT, ErrorT, AccT>(
       initAcc: AccT,
       onMatch: (value: ValueT, acc: AccT) => AccT,
@@ -120,5 +142,22 @@ export namespace Combinator {
         );
 
       return recurse(initStream, initAcc);
+    };
+
+  static any =
+    <InputT, ValueT, ErrorT>(
+      combinators: Combinator<InputT, ValueT, ErrorT>[],
+      onErorr: (s: Stream<InputT>) => ErrorT
+    ): Combinator<InputT, ValueT, ErrorT> =>
+    (initStream: Stream<InputT>) => {
+      for (const combinator of combinators) {
+        const result = combinator(initStream);
+        if (E.isLeft(result)) {
+          continue;
+        }
+        return E.right(result.right);
+      }
+
+      return E.left(onErorr(initStream));
     };
 }

@@ -1,3 +1,4 @@
+import { assertNever } from "../util/assertNever";
 import { MapDiscriminatedUnion } from "./../AdvancedTypes";
 
 export interface TokenWithContext<T extends Token> {
@@ -94,6 +95,17 @@ export namespace UnaryOperator {
         return true;
       default:
         return false;
+    }
+  }
+
+  export function fromString(t: "minus" | "bang"): UnaryOperator {
+    switch (t) {
+      case "minus":
+        return MINUS;
+      case "bang":
+        return BANG;
+      default:
+        assertNever(t);
     }
   }
 }

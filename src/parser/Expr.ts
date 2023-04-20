@@ -49,18 +49,12 @@ export namespace Binary {
 export interface Call {
   type: "call";
   callee: Expr;
-  paren: T.Token;
   arguments: Expr[];
 }
 export namespace Call {
-  export const of = (
-    callee: Expr,
-    paren: T.Token,
-    arguments_: Expr[]
-  ): Call => ({
+  export const of = (callee: Expr, arguments_: Expr[]): Call => ({
     type: "call",
     callee,
-    paren,
     arguments: arguments_,
   });
 }
@@ -136,13 +130,12 @@ export namespace Set {
 
 export interface Super {
   type: "super";
-  keyword: T.Token;
+  //keyword: T.Token;
   method: T.Identifier;
 }
 export namespace Super {
-  export const of = (keyword: T.Token, method: T.Identifier): Super => ({
+  export const of = (method: T.Identifier): Super => ({
     type: "super",
-    keyword,
     method,
   });
 }

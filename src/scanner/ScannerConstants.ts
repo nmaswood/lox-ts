@@ -12,7 +12,6 @@ export const ONE_CHAR: Map<string, OneCharacter> = new Map([
   [";", { type: "semicolon" }],
   ["*", { type: "star" }],
 ]);
-export const TWO_CHAR_LIST = ["!", "=", "<", ">"];
 export const TWO_CHAR: Set<string> = new Set(["!", "=", "<", ">"]);
 export const WHITE_SPACE: Set<string> = new Set([" ", "\r", "\t"]);
 export const KEYWORDS: Map<string, Keyword> = new Map([
