@@ -41,7 +41,7 @@ const forExpression: C.Combinator<
   T.TokenWithContext<T.Token>,
   Ex.Expr,
   PE.ParseError
-> = (stream: Types.TokenStream) => undefined!;
+> = (_: Types.TokenStream) => undefined!;
 
 const forEquality: C.Combinator<
   T.TokenWithContext<T.Token>,
@@ -119,7 +119,7 @@ const forTerm: C.Combinator<
 > = (stream: Types.TokenStream) => {
   return pipe(
     stream,
-    forUnary,
+    forFactor,
     E.map((factor) =>
       pipe(
         factor.stream,
@@ -129,7 +129,7 @@ const forTerm: C.Combinator<
             forFactor(withOperator.stream),
             E.map((withFactor) =>
               WithStream.of(
-                withOperator.stream,
+                withFactor.stream,
                 Ex.Binary.of(
                   withOperator.value.token,
                   factor.value,
@@ -162,7 +162,7 @@ const forFactor: C.Combinator<
           E.chain((withUnary) =>
             recurse(
               WithStream.of(
-                withOperator.stream,
+                withUnary.stream,
                 Ex.Binary.of(
                   withOperator.value.token,
                   withStream.value,
@@ -193,9 +193,9 @@ const forUnary: C.Combinator<
   Ex.Expr,
   PE.ParseError
 > = (stream: Types.TokenStream) => {
-  const parseUnary = (stream: Types.TokenStream) =>
+  const parseUnary = (s: Types.TokenStream) =>
     pipe(
-      stream,
+      s,
       C.Combinators.and2(
         C.Combinators.or2(TC.is("bang"), TC.is("minus")),
         forUnary
