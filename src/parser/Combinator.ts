@@ -2,6 +2,7 @@ import { WithStream } from "../stream/WithStream";
 import { Stream } from "../stream/Stream";
 import * as E from "fp-ts/lib/Either";
 import { pipe } from "fp-ts/function";
+import { init } from "fp-ts/lib/ReadonlyNonEmptyArray";
 
 export type CombinatorResult<InputT, ValueT, ErrorT> = E.Either<
   ErrorT,
@@ -144,20 +145,28 @@ export class Combinators {
       return recurse(initStream, initAcc);
     };
 
-  static any =
-    <InputT, ValueT, ErrorT>(
-      combinators: Combinator<InputT, ValueT, ErrorT>[],
-      onErorr: (s: Stream<InputT>) => ErrorT
-    ): Combinator<InputT, ValueT, ErrorT> =>
-    (initStream: Stream<InputT>) => {
-      for (const combinator of combinators) {
-        const result = combinator(initStream);
-        if (E.isLeft(result)) {
-          continue;
-        }
-        return E.right(result.right);
-      }
+  static optional =
+    <InputT, ValueT, ErrorT, AccT>(
+      initAcc: AccT,
+      onMatch: (value: ValueT, acc: AccT) => AccT,
+      f: Combinator<InputT, ValueT, ErrorT>
+    ) =>
+    (initStream: Stream<InputT>): WithStream<InputT, AccT> => {
+      const recurse = (
+        s: Stream<InputT>,
+        acc: AccT
+      ): WithStream<InputT, AccT> =>
+        pipe(
+          f(s),
+          E.map(({ stream, value }) => recurse(stream, onMatch(value, acc))),
+          E.getOrElseW(() => WithStream.of(s, acc))
+        );
 
-      return E.left(onErorr(initStream));
+      const foo = pipe(
+        f(initStream),
+        E.getOrElseW(() => initStream)
+      );
+
+      return recurse(initStream, initAcc);
     };
 }

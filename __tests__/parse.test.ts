@@ -9,6 +9,7 @@ interface Case {
   description: string;
   input: T.TokenWithContext<T.Token>[];
   expected: ReturnType<typeof parse>;
+  debug?: boolean;
 }
 
 const CASES: Case[] = [
@@ -148,6 +149,40 @@ const CASES: Case[] = [
     ]),
   },
   {
+    description: "1 * 2 * 3 * 4",
+    input: [
+      T.TokenWithContext.of(T.Number_.of(1), T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.STAR, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.Number_.of(2), T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.STAR, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.Number_.of(3), T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.STAR, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.Number_.of(4), T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.EOF, T.LexicalContext.of(0)),
+    ],
+    expected: E.right([
+      S.Expr.of(
+        Ex.Binary.of(
+          T.STAR,
+          Ex.Binary.of(
+            T.STAR,
+            Ex.Binary.of(
+              T.STAR,
+              Ex.Literal.of(T.Number_.of(1)),
+              Ex.Literal.of(T.Number_.of(2))
+            ),
+            Ex.Literal.of(T.Number_.of(3))
+          ),
+          Ex.Literal.of(T.Number_.of(4))
+        )
+      ),
+    ]),
+  },
+  {
     description: "!1 * !1",
     input: [
       T.TokenWithContext.of(T.BANG, T.LexicalContext.of(0)),
@@ -219,6 +254,98 @@ const CASES: Case[] = [
       ),
     ]),
   },
+  {
+    description: "1 == 1",
+    input: [
+      T.TokenWithContext.of(T.Number_.of(1), T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.EQUAL_EQUAL, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.Number_.of(1), T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.EOF, T.LexicalContext.of(0)),
+    ],
+    expected: E.right([
+      S.Expr.of(
+        Ex.Binary.of(
+          T.EQUAL_EQUAL,
+          Ex.Literal.of(T.Number_.of(1)),
+          Ex.Literal.of(T.Number_.of(1))
+        )
+      ),
+    ]),
+  },
+  {
+    description: "1 > 2",
+    input: [
+      T.TokenWithContext.of(T.Number_.of(1), T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.GREATER, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.Number_.of(2), T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.EOF, T.LexicalContext.of(0)),
+    ],
+    expected: E.right([
+      S.Expr.of(
+        Ex.Binary.of(
+          T.GREATER,
+          Ex.Literal.of(T.Number_.of(1)),
+          Ex.Literal.of(T.Number_.of(2))
+        )
+      ),
+    ]),
+  },
+  {
+    description: "false and false",
+    input: [
+      T.TokenWithContext.of(T.FALSE, T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.AND, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.FALSE, T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.EOF, T.LexicalContext.of(0)),
+    ],
+    expected: E.right([
+      S.Expr.of(
+        Ex.Binary.of(T.AND, Ex.Literal.of(T.FALSE), Ex.Literal.of(T.FALSE))
+      ),
+    ]),
+  },
+  {
+    description: "false and false and false",
+    input: [
+      T.TokenWithContext.of(T.FALSE, T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.AND, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.FALSE, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.AND, T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.FALSE, T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.EOF, T.LexicalContext.of(0)),
+    ],
+    expected: E.right([
+      S.Expr.of(
+        Ex.Binary.of(
+          T.AND,
+          Ex.Binary.of(T.AND, Ex.Literal.of(T.FALSE), Ex.Literal.of(T.FALSE)),
+
+          Ex.Literal.of(T.FALSE)
+        )
+      ),
+    ]),
+  },
+  {
+    description: "false or false",
+    input: [
+      T.TokenWithContext.of(T.FALSE, T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.OR, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.FALSE, T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.EOF, T.LexicalContext.of(0)),
+    ],
+    expected: E.right([
+      S.Expr.of(
+        Ex.Binary.of(T.OR, Ex.Literal.of(T.FALSE), Ex.Literal.of(T.FALSE))
+      ),
+    ]),
+  },
+
   //{
   //
   //description: "var xyz = 1",
@@ -336,11 +463,13 @@ const CASES: Case[] = [
 ];
 
 describe("parse", () => {
-  CASES.forEach(({ input, expected, description }) => {
+  CASES.forEach(({ input, expected, description, debug }) => {
     it(`correctly handles ${description}`, () => {
       const output = parse(input);
-      console.log(JSON.stringify(output, null, 2));
-      console.log(JSON.stringify(expected, null, 2));
+      if (debug) {
+        console.log(JSON.stringify(output, null, 2));
+        console.log(JSON.stringify(expected, null, 2));
+      }
       expect(output).toEqual(expected);
     });
   });

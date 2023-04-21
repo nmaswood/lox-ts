@@ -25,7 +25,7 @@ export function parse(
 
     return pipe(
       stream,
-      forEquality,
+      forAssignment,
       E.fold(
         (left) => recurse(stmts, [...errors, left], synchronize(stream)),
         (right) =>
@@ -42,6 +42,70 @@ const forExpression: C.Combinator<
   Ex.Expr,
   PE.ParseError
 > = (_: Types.TokenStream) => undefined!;
+
+const forAssignment: C.Combinator<
+  T.TokenWithContext<T.Token>,
+  Ex.Expr,
+  PE.ParseError
+> = (stream: Types.TokenStream) => {
+  const comb = (stream: Types.TokenStream) =>
+    pipe(
+      stream,
+      C.Combinators.and3(TC.is("identifier"), TC.is("equal"), forAssignment),
+
+      E.map((v) =>
+        WithStream.of(v.stream, Ex.Assign.of(v.value[0].token, v.value[2]))
+      )
+    );
+
+  return pipe(stream, C.Combinators.or2(comb, forLogicalOr));
+};
+
+const forLogicalOr: C.Combinator<
+  T.TokenWithContext<T.Token>,
+  Ex.Expr,
+  PE.ParseError
+> = (stream: Types.TokenStream) => {
+  const comb = C.Combinators.and2(TC.is("or"), forLogicalAnd);
+
+  return pipe(
+    stream,
+    forLogicalAnd,
+    E.map((term) =>
+      pipe(
+        term.stream,
+        C.Combinators.zeroOrMore(
+          term.value,
+          ([operator, expr], acc) => Ex.Binary.of(operator.token, acc, expr),
+          comb
+        )
+      )
+    )
+  );
+};
+
+const forLogicalAnd: C.Combinator<
+  T.TokenWithContext<T.Token>,
+  Ex.Expr,
+  PE.ParseError
+> = (stream: Types.TokenStream) => {
+  const comb = C.Combinators.and2(TC.is("and"), forEquality);
+
+  return pipe(
+    stream,
+    forEquality,
+    E.map((term) =>
+      pipe(
+        term.stream,
+        C.Combinators.zeroOrMore(
+          term.value,
+          ([operator, expr], acc) => Ex.Binary.of(operator.token, acc, expr),
+          comb
+        )
+      )
+    )
+  );
+};
 
 const forEquality: C.Combinator<
   T.TokenWithContext<T.Token>,
@@ -60,7 +124,7 @@ const forEquality: C.Combinator<
             forComparison(withOperator.stream),
             E.map((withComparison) =>
               WithStream.of(
-                withOperator.stream,
+                withComparison.stream,
                 Ex.Binary.of(
                   withOperator.value.token,
                   term.value,
@@ -79,8 +143,8 @@ const forComparison: C.Combinator<
   T.TokenWithContext<T.Token>,
   Ex.Expr,
   PE.ParseError
-> = (stream: Types.TokenStream) =>
-  pipe(
+> = (stream: Types.TokenStream) => {
+  const val = pipe(
     stream,
     forTerm,
     E.map((term) =>
@@ -97,7 +161,7 @@ const forComparison: C.Combinator<
             forTerm(withOperator.stream),
             E.map((withTerm) =>
               WithStream.of(
-                withOperator.stream,
+                withTerm.stream,
                 Ex.Binary.of(
                   withOperator.value.token,
                   term.value,
@@ -111,13 +175,15 @@ const forComparison: C.Combinator<
       )
     )
   );
+  return val;
+};
 
 const forTerm: C.Combinator<
   T.TokenWithContext<T.Token>,
   Ex.Expr,
   PE.ParseError
-> = (stream: Types.TokenStream) => {
-  return pipe(
+> = (stream: Types.TokenStream) =>
+  pipe(
     stream,
     forFactor,
     E.map((factor) =>
@@ -143,46 +209,28 @@ const forTerm: C.Combinator<
       )
     )
   );
-};
 
 const forFactor: C.Combinator<
   T.TokenWithContext<T.Token>,
   Ex.Expr,
   PE.ParseError
 > = (stream: Types.TokenStream) => {
-  const recurse = (
-    withStream: WithStream<T.TokenWithContext<T.Token>, Ex.Expr>
-  ): C.CombinatorResult<T.TokenWithContext<T.Token>, Ex.Expr, PE.ParseError> =>
-    pipe(
-      withStream.stream,
-      C.Combinators.or2(TC.is("star"), TC.is("slash")),
-      E.map((withOperator) =>
-        pipe(
-          forUnary(withOperator.stream),
-          E.chain((withUnary) =>
-            recurse(
-              WithStream.of(
-                withUnary.stream,
-                Ex.Binary.of(
-                  withOperator.value.token,
-                  withStream.value,
-                  withUnary.value
-                )
-              )
-            )
-          )
-        )
-      ),
-      E.getOrElse(() => E.right(withStream))
-    );
+  const comb = C.Combinators.and2(
+    C.Combinators.or2(TC.is("star"), TC.is("slash")),
+    forUnary
+  );
 
   return pipe(
     stream,
     forUnary,
     E.map((unary) =>
       pipe(
-        recurse(unary),
-        E.getOrElse(() => unary)
+        unary.stream,
+        C.Combinators.zeroOrMore(
+          unary.value,
+          ([operator, unary], acc) => Ex.Binary.of(operator.token, acc, unary),
+          comb
+        )
       )
     )
   );
