@@ -346,23 +346,86 @@ const CASES: Case[] = [
     ]),
   },
 
-  //{
-  //
-  //description: "var xyz = 1",
-  //input: [
-  //T.TokenWithContext.of(T.VAR, T.LexicalContext.of(0)),
-  //T.TokenWithContext.of(T.Identifier.of("xyz"), T.LexicalContext.of(0)),
-  //T.TokenWithContext.of(T.EQUAL, T.LexicalContext.of(0)),
-  //T.TokenWithContext.of(T.Number_.of(1), T.LexicalContext.of(0)),
-  //T.TokenWithContext.of(T.SEMICOLON, T.LexicalContext.of(0)),
-  //T.TokenWithContext.of(T.EOF, T.LexicalContext.of(0)),
-  //],
-  //expected: E.right([
-  //S.Expr.of(
-  //Ex.Assign.of(T.Identifier.of("xyz"), Ex.Literal.of(T.Number_.of(1)))
-  //),
-  //]),
-  //},
+  {
+    description: "xyz()",
+    input: [
+      T.TokenWithContext.of(T.Identifier.of("xyz"), T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.LEFT_PAREN, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.RIGHT_PAREN, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.EOF, T.LexicalContext.of(0)),
+    ],
+    expected: E.right([
+      S.Expr.of(Ex.Call.of(Ex.Literal.of(T.Identifier.of("xyz")), [])),
+    ]),
+  },
+  {
+    description: "xyz(1)",
+    input: [
+      T.TokenWithContext.of(T.Identifier.of("xyz"), T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.LEFT_PAREN, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.Number_.of(1), T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.RIGHT_PAREN, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.EOF, T.LexicalContext.of(0)),
+    ],
+    expected: E.right([
+      S.Expr.of(
+        Ex.Call.of(Ex.Literal.of(T.Identifier.of("xyz")), [
+          Ex.Literal.of(T.Number_.of(1)),
+        ])
+      ),
+    ]),
+  },
+  {
+    description: "xyz.foo",
+    input: [
+      T.TokenWithContext.of(T.Identifier.of("xyz"), T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.DOT, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.Identifier.of("foo"), T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.EOF, T.LexicalContext.of(0)),
+    ],
+    expected: E.right([
+      S.Expr.of(
+        Ex.Get.of(Ex.Literal.of(T.Identifier.of("xyz")), T.Identifier.of("foo"))
+      ),
+    ]),
+  },
+
+  {
+    debug: true,
+    description: "xyz.foo(1)",
+    input: [
+      T.TokenWithContext.of(T.Identifier.of("xyz"), T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.DOT, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.Identifier.of("foo"), T.LexicalContext.of(0)),
+      T.TokenWithContext.of(T.LEFT_PAREN, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.Number_.of(1), T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.RIGHT_PAREN, T.LexicalContext.of(0)),
+
+      T.TokenWithContext.of(T.EOF, T.LexicalContext.of(0)),
+    ],
+    expected: E.right([
+      S.Expr.of(
+        Ex.Call.of(
+          Ex.Get.of(
+            Ex.Literal.of(T.Identifier.of("xyz")),
+            T.Identifier.of("foo")
+          ),
+          [Ex.Literal.of(T.Number_.of(1))]
+        )
+      ),
+    ]),
+  },
+
   //{
   //description: "var xyz = !false;",
   //input: [

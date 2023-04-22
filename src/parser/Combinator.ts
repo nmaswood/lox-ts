@@ -131,42 +131,32 @@ export class Combinators {
       onMatch: (value: ValueT, acc: AccT) => AccT,
       f: Combinator<InputT, ValueT, ErrorT>
     ) =>
-    (initStream: Stream<InputT>): WithStream<InputT, AccT> => {
+    (
+      initStream: Stream<InputT>
+    ): E.Either<ErrorT, WithStream<InputT, AccT>> => {
       const recurse = (
         s: Stream<InputT>,
         acc: AccT
-      ): WithStream<InputT, AccT> =>
+      ): E.Either<ErrorT, WithStream<InputT, AccT>> =>
         pipe(
           f(s),
           E.map(({ stream, value }) => recurse(stream, onMatch(value, acc))),
-          E.getOrElseW(() => WithStream.of(s, acc))
+          E.getOrElseW(() => E.right(WithStream.of(s, acc)))
         );
 
       return recurse(initStream, initAcc);
     };
 
   static optional =
-    <InputT, ValueT, ErrorT, AccT>(
-      initAcc: AccT,
-      onMatch: (value: ValueT, acc: AccT) => AccT,
+    <InputT, ValueT, ErrorT>(
+      defaultT: ValueT,
       f: Combinator<InputT, ValueT, ErrorT>
-    ) =>
-    (initStream: Stream<InputT>): WithStream<InputT, AccT> => {
-      const recurse = (
-        s: Stream<InputT>,
-        acc: AccT
-      ): WithStream<InputT, AccT> =>
+    ): Combinator<InputT, ValueT, ErrorT> =>
+    (initStream: Stream<InputT>) =>
+      E.right(
         pipe(
-          f(s),
-          E.map(({ stream, value }) => recurse(stream, onMatch(value, acc))),
-          E.getOrElseW(() => WithStream.of(s, acc))
-        );
-
-      const foo = pipe(
-        f(initStream),
-        E.getOrElseW(() => initStream)
+          f(initStream),
+          E.getOrElseW(() => WithStream.of(initStream, defaultT))
+        )
       );
-
-      return recurse(initStream, initAcc);
-    };
 }

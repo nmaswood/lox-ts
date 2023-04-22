@@ -25,11 +25,10 @@ export function parse(
 
     return pipe(
       stream,
-      forAssignment,
+      forStmt,
       E.fold(
         (left) => recurse(stmts, [...errors, left], synchronize(stream)),
-        (right) =>
-          recurse([...stmts, S.Expr.of(right.value)], errors, right.stream)
+        (right) => recurse([...stmts, right.value], errors, right.stream)
       )
     );
   }
@@ -37,11 +36,28 @@ export function parse(
   return recurse([], [], new Stream(tokensWithContext));
 }
 
+const forStmt: C.Combinator<
+  T.TokenWithContext<T.Token>,
+  S.Stmt,
+  PE.ParseError
+> = (stream: Types.TokenStream) => forExpressionStmt(stream);
+
+const forExpressionStmt: C.Combinator<
+  T.TokenWithContext<T.Token>,
+  S.Expr,
+  PE.ParseError
+> = (stream: Types.TokenStream) =>
+  pipe(
+    forExpression(stream),
+
+    E.map((v) => WithStream.of(v.stream, S.Expr.of(v.value)))
+  );
+
 const forExpression: C.Combinator<
   T.TokenWithContext<T.Token>,
   Ex.Expr,
   PE.ParseError
-> = (_: Types.TokenStream) => undefined!;
+> = (stream: Types.TokenStream) => forAssignment(stream);
 
 const forAssignment: C.Combinator<
   T.TokenWithContext<T.Token>,
@@ -71,7 +87,7 @@ const forLogicalOr: C.Combinator<
   return pipe(
     stream,
     forLogicalAnd,
-    E.map((term) =>
+    E.chain((term) =>
       pipe(
         term.stream,
         C.Combinators.zeroOrMore(
@@ -94,7 +110,7 @@ const forLogicalAnd: C.Combinator<
   return pipe(
     stream,
     forEquality,
-    E.map((term) =>
+    E.chain((term) =>
       pipe(
         term.stream,
         C.Combinators.zeroOrMore(
@@ -223,7 +239,7 @@ const forFactor: C.Combinator<
   return pipe(
     stream,
     forUnary,
-    E.map((unary) =>
+    E.chain((unary) =>
       pipe(
         unary.stream,
         C.Combinators.zeroOrMore(
@@ -264,10 +280,105 @@ const forCall: C.Combinator<
   Ex.Expr,
   PE.ParseError
 > = (stream: Types.TokenStream) => {
+  const matchCallOrGet = C.Combinators.or2(
+    (s: Types.TokenStream) =>
+      pipe(
+        s,
+        C.Combinators.and3(
+          TC.is("left_paren"),
+          C.Combinators.optional([], forArguments),
+          TC.is("right_paren")
+        ),
+        E.map((val) => WithStream.of(val.stream, val.value[1]))
+      ),
+
+    (s: Types.TokenStream) =>
+      pipe(
+        s,
+        C.Combinators.and2(TC.is("dot"), TC.is("identifier")),
+        E.map((val) => WithStream.of(val.stream, val.value[1].token))
+      )
+  );
+
   return pipe(
     stream,
-    // todo ARGUMENTS later
-    forPrimary
+    forPrimary,
+    E.map((v) =>
+      pipe(
+        v.stream,
+        C.Combinators.zeroOrMore(
+          v.value,
+          (value, acc) => {
+            // arguments
+            if (Array.isArray(value)) {
+              return Ex.Call.of(acc, value);
+              // get
+            } else if (value.type === "identifier") {
+              return Ex.Get.of(acc, value);
+            }
+            throw new Error("illegal state");
+          },
+          matchCallOrGet
+        ),
+        E.getOrElseW(() => v)
+      )
+    )
+  );
+};
+
+const forParameters: C.Combinator<
+  T.TokenWithContext<T.Token>,
+  T.Identifier[],
+  PE.ParseError
+> = (stream: Types.TokenStream) => {
+  const comb = C.Combinators.and2(TC.is("comma"), TC.is("identifier"));
+  return pipe(
+    stream,
+    TC.is("identifier"),
+    E.chain((v) =>
+      pipe(
+        v.stream,
+
+        C.Combinators.zeroOrMore(
+          [v.value],
+          ([, identifier], acc) => [...acc, identifier],
+          comb
+        ),
+
+        E.map((value) =>
+          WithStream.of(
+            value.stream,
+            value.value.map((v) => v.token)
+          )
+        )
+      )
+    )
+  );
+};
+
+const forArguments: C.Combinator<
+  T.TokenWithContext<T.Token>,
+  Ex.Expr[],
+  PE.ParseError
+> = (stream: Types.TokenStream) => {
+  const comb = C.Combinators.and2(TC.is("comma"), forExpression);
+
+  return pipe(
+    stream,
+    forExpression,
+    E.chain((v) =>
+      pipe(
+        v.stream,
+
+        C.Combinators.zeroOrMore(
+          [v.value],
+          ([, expr], acc) => [...acc, expr],
+          comb
+        ),
+
+        E.map((value) => WithStream.of(value.stream, value.value))
+      )
+    )
   );
 };
 
@@ -291,6 +402,7 @@ const forPrimary = (stream: Types.TokenStream) =>
         case "nil":
         case "number":
         case "string":
+        case "identifier":
           return E.right(WithStream.of(next.stream, Ex.Literal.of(token)));
         case "left_paren":
           return pipe(
@@ -317,7 +429,19 @@ const forPrimary = (stream: Types.TokenStream) =>
         case "this":
           return E.right(WithStream.of(next.stream, Ex.This.of(token)));
         default:
-          return E.left(PE.wrongToken(next.value));
+          return E.left(
+            PE.wrongToken(
+              next.value,
+              "true",
+              "false",
+              "nil",
+              "number",
+              "string",
+              "left_paren",
+              "super",
+              "this"
+            )
+          );
       }
     })
   );
